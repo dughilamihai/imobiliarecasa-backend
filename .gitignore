@@ -1,5 +1,8 @@
-# Ignore static directory
+# Ignoră subfolderele static directory
 static/
+
+# Dar nu ignora robots.txt
+!/static/robots.txt
 
 # Ignore cache directory
 cache/
