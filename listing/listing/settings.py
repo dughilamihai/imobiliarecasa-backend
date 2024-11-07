@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'api',
+    'django_cleanup',  # delete the image aftere deleteing the model     
 ]
 
 MIDDLEWARE = [
