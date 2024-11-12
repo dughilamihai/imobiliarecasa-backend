@@ -31,7 +31,7 @@ SECRET_KEY = 'django-insecure-4=9y%9s%k5=n=urgxcb&uzlu=l)!&2zhn9a1k+0j_s8c)_^@qr
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'api.imobiliare.casa']
 
 
 # Application definition
