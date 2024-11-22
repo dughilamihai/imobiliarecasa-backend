@@ -10,9 +10,6 @@ cache/
 # Ignore media directory
 media/
 
-# ignore migration files
-**/migrations/*
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
