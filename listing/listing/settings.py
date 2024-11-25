@@ -144,3 +144,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# maximum number of confirmation emails to an user    
+MAX_CONFIRMATION_EMAILS = 2
+
+AUTH_USER_MODEL = 'api.User'

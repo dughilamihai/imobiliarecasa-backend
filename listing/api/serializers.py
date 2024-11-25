@@ -17,3 +17,7 @@ class CategorySerializer(serializers.ModelSerializer):
         if obj.parent:
             return {"id": obj.parent.id, "name": obj.parent.name, "slug": obj.parent.slug}
         return None
+    
+# for email confirmations
+class EmailSerializer(serializers.Serializer):
+    email = serializers.EmailField()     
