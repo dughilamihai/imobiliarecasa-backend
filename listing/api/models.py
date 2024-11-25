@@ -144,11 +144,11 @@ class UserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 class User(AbstractUser):
-    USER_TYPES = {
-        'bronze': 3,
-        'silver': 20,
-        'gold': 50,
-    }
+    USER_TYPES = [
+        ('bronze', 'Bronze'),
+        ('silver', 'Silver'),
+        ('gold', 'Gold'),
+    ]
     user_type = models.CharField(
         max_length=10,
         choices=USER_TYPES,
