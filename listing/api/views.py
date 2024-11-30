@@ -36,6 +36,26 @@ class CategoryListAV(APIView):
         serializer = CategorySerializer(parent_categories, many=True)
         return Response(serializer.data)
     
+# register user        
+class UserRegistrationAPIView(APIView):
+    permission_classes = [AllowAny]  # Allow unauthenticated requests
+      
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+
+            # Create an email confirmation token for the newly registered user
+            token = EmailConfirmationToken.objects.create(user=user)
+
+            # Send the confirmation email with the token to the user
+            send_confirmation_email(email=user.email, token_id=token.pk, user_id=user.pk)
+
+            # Return success response
+            return Response({'message': 'Utilizatorul s-a înregistrat cu succes. Vă rugăm să vă verificați e-mailul pentru a vă confirma contul.'}, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)      
+    
 # confirm email address for unlogged users
 class SendEmailConfirmationToken(APIView):
     permission_classes = [AllowAny]  # Allow unauthenticated requests
@@ -69,5 +89,19 @@ class SendEmailConfirmationToken(APIView):
             send_confirmation_email(email=user.email, token_id=token.pk, user_id=user.pk)
 
         # Return a generic success message in Romanian
-        return Response({'message': 'Veti primi un email de confirmare pentru a valida contul'}, status=status.HTTP_200_OK)    
+        return Response({'message': 'Veti primi un email de confirmare pentru a valida contul'}, status=status.HTTP_200_OK) 
+    
+# for confirmation email send to user after registration    
+def confirm_email_view(request):
+    token_id = request.GET.get('token_id', None)
+    try:
+        token = EmailConfirmationToken.objects.get(pk = token_id)
+        user = token.user
+        user.is_email_confirmed = True
+        user.save()
+        data = {'is_email_confirmed': True}
+        return render(request, template_name='confirm_email_view.html', context=data)  
+    except EmailConfirmationToken.DoesNotExist:
+        data = {'is_email_confirmed': False}
+        return render(request, template_name='confirm_email_view.html', context=data)          
 
