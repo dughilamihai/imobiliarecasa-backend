@@ -6,8 +6,14 @@ from rest_framework import status
 from django.conf import settings
 # need to send confirmation email after user sign up
 from api.utils import send_confirmation_email
+
+from django.contrib.auth import authenticate
+from rest_framework.permissions import IsAuthenticated
+import logging
 from .models import *
 from .serializers import *
+
+logger = logging.getLogger(__name__)
 
 class APIRootView(APIView):
     """
@@ -104,4 +110,29 @@ def confirm_email_view(request):
     except EmailConfirmationToken.DoesNotExist:
         data = {'is_email_confirmed': False}
         return render(request, template_name='confirm_email_view.html', context=data)          
+
+
+# user delete account
+class AccountDeletionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = AccountDeletionSerializer(data=request.data)
+        if serializer.is_valid():
+            user = request.user
+
+            # Check if the provided password is correct
+            if not authenticate(username=user.username, password=serializer.validated_data['password']):
+                return Response({'message': 'Parola nu este corectă'}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                # Perform account deletion logic here
+                user.delete()
+                logger.info(f'User {user.username} ({user.email}) deleted their account.')
+                return Response({'message': 'Contul a fost șters cu succes.'}, status=status.HTTP_204_NO_CONTENT)
+            except Exception as e:
+                logger.error(f"Error deleting account for user {user.username}: {str(e)}")
+                return Response({'message': 'A apărut o eroare la ștergerea contului.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)    
 
