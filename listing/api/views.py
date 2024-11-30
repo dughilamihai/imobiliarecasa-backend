@@ -4,11 +4,13 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework import status
 from django.conf import settings
-# need to send confirmation email after user sign up
+# send confirmation email after user sign up
 from api.utils import send_confirmation_email
 
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
+# for login
+from rest_framework_simplejwt.views import TokenObtainPairView
 import logging
 from .models import *
 from .serializers import *
@@ -109,8 +111,12 @@ def confirm_email_view(request):
         return render(request, template_name='confirm_email_view.html', context=data)  
     except EmailConfirmationToken.DoesNotExist:
         data = {'is_email_confirmed': False}
-        return render(request, template_name='confirm_email_view.html', context=data)          
-
+        return render(request, template_name='confirm_email_view.html', context=data)        
+    
+ 
+# for logging
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
 
 # user delete account
 class AccountDeletionView(APIView):

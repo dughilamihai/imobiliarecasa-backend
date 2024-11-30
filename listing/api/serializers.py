@@ -4,8 +4,16 @@ from rest_framework import serializers
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
+
+# for logging in
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework.exceptions import AuthenticationFailed
+
+import logging
 from rest_framework import serializers
 from .models import *
+
+logger = logging.getLogger(__name__)
 
 class CategorySerializer(serializers.ModelSerializer):
     children = serializers.SerializerMethodField()
@@ -107,8 +115,41 @@ class UserDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'email', 'username', 'first_name', 'last_name', 'full_name', 'user_type', 'has_accepted_tos']
 
     def get_full_name(self, obj):
-        return f"{obj.first_name} {obj.last_name}".strip()
+        return f"{obj.first_name} {obj.last_name}".strip()   
       
+      
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        # Obține utilizatorul pe baza datelor de autentificare
+        user = self.get_user(attrs)
+
+        # Verifică dacă email-ul este confirmat
+        if not user.email_verified:
+            logger.warning(f"User {user.email} attempted to log in without verifying email.")
+            raise AuthenticationFailed({
+                'detail': 'Contul nu este activ! Nu ați confirmat link-ul primit pe email.',
+                'code': 'email_not_verified'
+            })
+
+        # Dacă utilizatorul este valid, continuă cu validarea de bază
+        data = super().validate(attrs)
+        return data
+
+    def get_user(self, attrs):
+        """
+        Obține utilizatorul pe baza datelor de autentificare.
+        """
+        username = attrs.get('username') or attrs.get('email')
+        password = attrs.get('password')
+
+        # Încearcă să autentifici utilizatorul
+        from django.contrib.auth import authenticate
+        user = authenticate(username=username, password=password)
+
+        if user is None:
+            raise AuthenticationFailed('Date de autentificare incorecte')
+
+        return user  
 
 class AccountDeletionSerializer(serializers.Serializer):
     password = serializers.CharField() 

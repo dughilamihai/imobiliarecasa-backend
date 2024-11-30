@@ -1,5 +1,3 @@
-from django.contrib import admin
-
 # Register your models here.
 from django.contrib import admin
 from .models import *
@@ -33,13 +31,17 @@ class CategoryAdmin(admin.ModelAdmin):
     
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ['email', 'username', 'is_staff', 'is_superuser', 'get_user_type_display', 'last_login', 'first_name', 'last_name', 'email_verified', 'created_at']
+    list_display = ['email', 'username', 'is_staff', 'is_superuser', 'get_user_type_display', 'last_login', 'first_name', 'last_name', 'email_verified', 'receive_email_status','created_at']
     search_fields = ("username", "email")
     list_filter = [('user_type', admin.ChoicesFieldListFilter)]    
     
     def get_user_type_display(self, obj):
         return dict(User.USER_TYPES)[obj.user_type]
-    get_user_type_display.short_description = 'User Type'    
+    get_user_type_display.short_description = 'User Type' 
+    
+    @admin.display(description="Primește email")
+    def receive_email_status(self, obj):
+        return "DA" if obj.receive_email else "NU"       
 
     class Meta:
         model = User
