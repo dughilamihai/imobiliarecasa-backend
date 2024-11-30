@@ -1,0 +1,18 @@
+{% comment %} {% extends 'index.html' %} {% endcomment %}
+
+{% block main %}
+
+{% if is_email_confirmed == True %}
+
+<div class="notification is-success">
+    <p>Contul dvs. a fost aprobat! Vă puteți autentifica acum!</p>
+</div> 
+
+{% else %}
+
+<div class="notification is-dangers">
+    <p>Codul dvs. de confirmare a expirat! Vă rugăm să solicitați unul nou!</p>
+</div> 
+
+{% endif %}
+{% endblock main %}
