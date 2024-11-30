@@ -97,7 +97,18 @@ class UserSerializer(serializers.ModelSerializer):
         if password:
             instance.set_password(password)
         instance.save()
-        return instance    
+        return instance  
+    
+class UserDetailSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'username', 'first_name', 'last_name', 'full_name', 'user_type', 'has_accepted_tos']
+
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip()
+      
 
 class AccountDeletionSerializer(serializers.Serializer):
     password = serializers.CharField() 
