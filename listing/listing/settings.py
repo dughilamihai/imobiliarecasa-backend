@@ -174,3 +174,38 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': False,             # Tokenurile de refresh vechi nu vor fi adăugate în blacklist (nu este relevant dacă rotația este dezactivată).
     "UPDATE_LAST_LOGIN": True,                     # Se va actualiza câmpul `last_login` la fiecare utilizare a unui refresh token.
 }
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'debug.log'),  # Fișierul unde se vor salva logurile
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'api': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
