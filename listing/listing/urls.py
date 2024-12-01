@@ -25,6 +25,7 @@ from django.conf.urls.static import static
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
     TokenVerifyView,
+    TokenBlacklistView,
 )
 # from rest_framework_simplejwt.token_blacklist.views import TokenBlacklistView
 
@@ -34,7 +35,7 @@ urlpatterns = [
     # Rute pentru autentificare JWT
     path('api/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),  # Login și obținere tokenuri
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),  # Refresh token
-    # path('api/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),  # Logout (blacklist token)
+    path('api/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),  # Logout (blacklist token)
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),  # Verificare token (opțional)    
 ]
 
