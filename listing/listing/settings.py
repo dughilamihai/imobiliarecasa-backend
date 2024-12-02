@@ -178,34 +178,18 @@ SIMPLE_JWT = {
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
     'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'debug.log'),  # Fișierul unde se vor salva logurile
-            'formatter': 'verbose',
+        'console': {
+            'level': 'WARNING',  # Setează nivelul la 'WARNING' pentru a evita logurile de tip 'INFO'
+            'class': 'logging.StreamHandler',
         },
     },
     'loggers': {
         'django': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
+            'handlers': ['console'],
+            'level': 'WARNING',  # Setează nivelul pentru logger-ul Django la 'WARNING'
             'propagate': True,
-        },
-        'api': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': False,
         },
     },
 }
+

@@ -40,7 +40,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'username', 'password', 'confirm_password', 'user_type',
+            'id', 'email', 'username', 'password', 'confirm_password',
             'first_name', 'last_name', 'hashed_ip_address', 'created_at', 'full_name', 'has_accepted_tos'
         ]
         extra_kwargs = {
@@ -84,19 +84,25 @@ class UserSerializer(serializers.ModelSerializer):
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("Numele de utilizator este deja folosit.")
         return value
-
-    def validate_user_type(self, value):
-        valid_types = ['bronze', 'silver', 'gold']
-        if value not in valid_types:
-            raise serializers.ValidationError("Tipul utilizatorului este invalid.")
-        return value
     
     def create(self, validated_data):
-        # Set default value for user_type if not provided
-        validated_data.setdefault('user_type', 0)
+        # Obține sau creează tipul de utilizator 'bronze'
+        user_type = UserType.objects.get_or_create(type_name='bronze')[0]
+
+        # Extrage parola și creează utilizatorul
         password = validated_data.pop('password')
         user = User.objects.create_user(password=password, **validated_data)
-        return user   
+
+        # Creează abonamentul pentru utilizatorul nou creat
+        UserSubscription.objects.create(
+            user=user,
+            user_type=user_type,
+            start_date=now(),  # Data începerii abonamentului
+            end_date=None,  # Abonament nelimitat
+            is_active_field=True  # Activ automat
+        )
+
+        return user  
 
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)

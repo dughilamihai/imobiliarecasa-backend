@@ -33,11 +33,19 @@ class CategoryAdmin(admin.ModelAdmin):
 class UserAdmin(admin.ModelAdmin):
     list_display = ['email', 'username', 'is_staff', 'is_superuser', 'get_user_type_display', 'last_login', 'first_name', 'last_name', 'email_verified', 'receive_email_status','created_at']
     search_fields = ("username", "email")
-    list_filter = [('user_type', admin.ChoicesFieldListFilter)]    
-    
+    list_filter = ['subscription__user_type', 'is_staff']   
+      
+    # Afișează user_type
     def get_user_type_display(self, obj):
-        return dict(User.USER_TYPES)[obj.user_type]
-    get_user_type_display.short_description = 'User Type' 
+        return obj.subscription.user_type.type_name if hasattr(obj, 'subscription') else 'No Subscription'
+    get_user_type_display.short_description = 'User Type'
+
+    # Afișează detalii despre subscription
+    def get_subscription_details(self, obj):
+        if hasattr(obj, 'subscription'):
+            return f"Start: {obj.subscription.start_date} - Expire: {obj.subscription.end_date} - Active: {obj.subscription.is_active()}"
+        return 'No Subscription'
+    get_subscription_details.short_description = 'Subscription Details'
     
     @admin.display(description="Primește email")
     def receive_email_status(self, obj):
@@ -46,6 +54,17 @@ class UserAdmin(admin.ModelAdmin):
     class Meta:
         model = User
         fields = '__all__' 
+        
+@admin.register(UserType)
+class UserTypeAdmin(admin.ModelAdmin):
+    list_display = ('type_name', 'max_ads', 'background_color', 'price_per_day')
+    search_fields = ('type_name',)   
+    
+@admin.register(UserSubscription)
+class UserSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('user', 'user_type', 'start_date', 'end_date', 'is_active_field')
+    search_fields = ('user__username', 'user__email')
+    list_filter = ('user_type', 'is_active_field')  # Folosește câmpul calculat pentru filtrare    
 
 class EmailConfirmationTokenAdmin(admin.ModelAdmin):
     list_display = ('id', 'created_at', 'user')

@@ -15,6 +15,7 @@ from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError
 import phonenumbers
 from django.utils import timezone
+from django.utils.timezone import now
 import hashlib
 
 class County(models.Model):
@@ -143,17 +144,17 @@ class UserManager(BaseUserManager):
             raise ValueError(_('Superuser must have is_superuser=True.'))
         return self.create_user(email, password, **extra_fields)
 
+class UserType(models.Model):
+    type_name = models.CharField(max_length=20, unique=True)  # Ex: 'bronze', 'silver', 'gold'
+    max_ads = models.PositiveIntegerField(default=0)  # Număr maxim de anunțuri permis
+    background_color = models.CharField(max_length=7, default='#FFFFFF')  # Cod HEX pentru culoarea de fundal
+    price_per_day = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)  # Preț pe zi 
+
+    def __str__(self):
+        return self.type_name
+    
+
 class User(AbstractUser):
-    USER_TYPES = [
-        ('bronze', 'Bronze'),
-        ('silver', 'Silver'),
-        ('gold', 'Gold'),
-    ]
-    user_type = models.CharField(
-        max_length=10,
-        choices=USER_TYPES,
-        default='bronze'
-    ) 
     email = models.EmailField(unique=True)    
     id = models.UUIDField(primary_key=True, db_index=True, unique=True, default=uuid4, editable=False)
     email_verified = models.BooleanField(default=False)  
@@ -214,6 +215,42 @@ class User(AbstractUser):
             raise ValidationError("Adresa de email nu a fost validata")
         return None     
 
+class UserSubscription(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="subscription")
+    user_type = models.ForeignKey(UserType, on_delete=models.CASCADE, related_name="subscriptions")
+    start_date = models.DateTimeField(default=now)  # Data începerii abonamentului
+    end_date = models.DateTimeField(null=True, blank=True)  # Data expirării abonamentului, poate fi None pentru nelimitat
+    
+    # Câmp boolean care reflectă statusul activității abonamentului
+    is_active_field = models.BooleanField(default=False, editable=False)
+
+    def clean(self):
+        # Verifică dacă end_date este înaintea sau egal cu start_date
+        if self.end_date and self.end_date <= self.start_date:
+            raise ValidationError("Data de expirare nu poate fi înainte sau egală cu data de început.")
+
+    def save(self, *args, **kwargs):
+        # Rulează validările personalizate
+        self.full_clean()
+
+        # Actualizează câmpul is_active_field în funcție de data expirării
+        if self.end_date is None:
+            self.is_active_field = True  # Abonamentul este activ dacă end_date este None
+        else:
+            self.is_active_field = self.end_date >= now()  # Compară cu data curentă dacă end_date nu este None
+
+        # Salvează obiectul
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user} - {self.user_type.type_name} (expiră la {self.end_date})"
+
+    def remaining_days(self):
+        """Returnează numărul de zile rămase din abonament."""
+        if self.end_date:
+            delta = self.end_date - now()
+            return max(delta.days, 0)
+        return None
 
 class EmailConfirmationToken(models.Model):
         id = models.UUIDField(primary_key=True, db_index=True, unique=True, default=uuid4, editable=False)
