@@ -41,7 +41,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'email', 'username', 'password', 'confirm_password',
-            'first_name', 'last_name', 'hashed_ip_address', 'created_at', 'full_name', 'has_accepted_tos'
+            'first_name', 'last_name', 'hashed_ip_address', 'created_at', 'full_name', 'has_accepted_tos', 'is_active'
         ]
         extra_kwargs = {
             'password': {'write_only': True, 'validators': [validate_password]},
@@ -49,7 +49,7 @@ class UserSerializer(serializers.ModelSerializer):
             'created_at': {'read_only': True},
             'email': {'required': True},  # Email este obligatoriu
             'username': {'required': True},  # Username este obligatoriu
-           'has_accepted_tos': {'required': True}            
+            'has_accepted_tos': {'required': True}            
         }
         
     def validate(self, attrs):
@@ -115,19 +115,34 @@ class UserSerializer(serializers.ModelSerializer):
     
 class UserDetailSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
+    user_type = serializers.SerializerMethodField()    
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'username', 'first_name', 'last_name', 'full_name', 'user_type', 'has_accepted_tos']
+        fields = ['id', 'email', 'username', 'first_name', 'last_name', 'full_name', 'has_accepted_tos', 'user_type']
 
     def get_full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}".strip()   
+    
+    def get_user_type(self, obj):
+        # Obținem user_type din UserSubscription
+        subscription = obj.subscription 
+        if subscription and subscription.user_type:
+            return subscription.user_type.type_name  # Returnează tipul de abonament
+        return None  # În caz că nu există un abonament asociat    
       
       
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         # Obține utilizatorul pe baza datelor de autentificare
         user = self.get_user(attrs)
+        
+        # Verifică dacă utilizatorul este activ
+        if not user.is_active:
+            raise AuthenticationFailed({
+                'detail': 'Contul este dezactivat. Contactați administratorul pentru detalii.',
+                'code': 'user_inactive'
+            })        
 
         # Verifică dacă email-ul este confirmat
         if not user.email_verified:

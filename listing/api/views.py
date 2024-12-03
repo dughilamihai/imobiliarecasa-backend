@@ -11,6 +11,10 @@ from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
 # for login
 from rest_framework_simplejwt.views import TokenObtainPairView
+# for change password
+from django.contrib.auth.hashers import check_password
+from rest_framework_simplejwt.tokens import RefreshToken
+
 import logging
 from .models import *
 from .serializers import *
@@ -148,5 +152,61 @@ class UserDetailsAPIView(APIView):
     def get(self, request):
         user = request.user
         serializer = UserDetailSerializer(user)
-        return Response(serializer.data)        
+        return Response(serializer.data)       
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = ChangePasswordSerializer(data=request.data)
+
+        # Validare date
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        old_password = serializer.validated_data['old_password']
+        new_password = serializer.validated_data['new_password']
+
+        # Verifică dacă refresh token-ul este valid înainte de a continua cu schimbarea parolei
+        refresh_token = request.data.get('refresh')
+        if refresh_token:
+            try:
+                # Validare refresh token
+                token = RefreshToken(refresh_token)
+                # Dacă token-ul este valid, îl putem lăsa să continue și schimbăm parola
+            except Exception as e:
+                return Response({
+                    'message': 'Token-ul refresh nu este valid sau a expirat.',
+                    'error': str(e)
+                }, status=status.HTTP_401_UNAUTHORIZED)
+        else:
+            return Response({'message': 'Token-ul refresh este necesar.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verifică dacă parola veche este corectă
+        if not check_password(old_password, user.password):
+            return Response({'message': 'Parola veche este incorectă.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verifică dacă parola nouă este diferită de parola veche
+        if old_password == new_password:
+            return Response({'message': 'Parola nouă trebuie să fie diferită de parola actuală.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validează parola nouă utilizând regulile Django
+        try:
+            validate_password(new_password, user=user)
+        except ValidationError as e:
+            return Response({'message': 'Parola nouă nu este validă.', 'errors': e.messages}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Setează parola nouă
+        user.set_password(new_password)
+        user.save()
+
+        # După schimbarea parolei, adăugăm token-ul la lista neagră (blacklist)
+        if refresh_token:
+            try:
+                token.blacklist()  # Blacklist token-ul vechi
+            except Exception as e:
+                return Response({'message': 'Nu am reușit să blacklistez token-ul refresh.', 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'detail': 'Parola a fost schimbată cu succes.'}, status=status.HTTP_200_OK)
 
