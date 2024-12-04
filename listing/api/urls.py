@@ -13,7 +13,8 @@ urlpatterns = [
     path('sterge-cont/', AccountDeletionView.as_view(), name='delete-account'),  
     path('send-confirmation-email/', SendEmailConfirmationToken.as_view(), name='send_email_confirmation_api_view'),  
     path('confirm-email/', confirm_email_view, name='confirm_email_view'),  
-    path('schimba-parola/', ChangePasswordView.as_view(), name='change-password'),       
+    path('schimba-parola/', ChangePasswordView.as_view(), name='change-password'),
+    path('user-update/', UserUpdateAPIView.as_view(), name='user-update'),           
     # path('listings/', views.listing_list, name='listing_list'),
     # path('listings/<int:id>/', views.listing_detail, name='listing_detail'),
 ]

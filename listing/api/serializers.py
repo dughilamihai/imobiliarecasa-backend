@@ -85,6 +85,26 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Numele de utilizator este deja folosit.")
         return value
     
+    def validate_first_name(self, value):
+        """
+        Validează prenumele: minim 3 caractere și maxim 59 caractere.
+        """
+        if len(value) < 3:
+            raise serializers.ValidationError("Prenumele trebuie să conțină cel puțin 3 caractere.")
+        if len(value) > 59:  # 59 în loc de 60 pentru personalizare
+            raise serializers.ValidationError("Prenumele nu poate depăși 59 de caractere.")
+        return value
+
+    def validate_last_name(self, value):
+        """
+        Validează numele: minim 3 caractere și maxim 89 caractere.
+        """
+        if len(value) < 3:
+            raise serializers.ValidationError("Numele trebuie să conțină cel puțin 3 caractere.")
+        if len(value) > 89:  # 89 în loc de 90 pentru personalizare
+            raise serializers.ValidationError("Numele nu poate depăși 89 de caractere.")
+        return value      
+    
     def create(self, validated_data):
         # Obține sau creează tipul de utilizator 'bronze'
         user_type = UserType.objects.get_or_create(type_name='bronze')[0]
@@ -178,6 +198,33 @@ class AccountDeletionSerializer(serializers.Serializer):
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True, min_length=8, max_length=100)
     new_password = serializers.CharField(required=True, min_length=8, max_length=100)     
+    
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField()  # Exclude validarea automată `unique=True`    
+    class Meta:
+        model = User
+        fields = ['email', 'first_name', 'last_name']
+
+    def validate_first_name(self, value):
+        """
+        Validează prenumele: minim 3 caractere și maxim 59 caractere.
+        """
+        if len(value) < 3:
+            raise serializers.ValidationError("Prenumele trebuie să conțină cel puțin 3 caractere.")
+        if len(value) > 59:  # 59 în loc de 60 pentru personalizare
+            raise serializers.ValidationError("Prenumele nu poate depăși 59 de caractere.")
+        return value
+
+    def validate_last_name(self, value):
+        """
+        Validează numele: minim 3 caractere și maxim 89 caractere.
+        """
+        if len(value) < 3:
+            raise serializers.ValidationError("Numele trebuie să conțină cel puțin 3 caractere.")
+        if len(value) > 89:  # 89 în loc de 90 pentru personalizare
+            raise serializers.ValidationError("Numele nu poate depăși 89 de caractere.")
+        return value 
 
     
 # for email confirmations

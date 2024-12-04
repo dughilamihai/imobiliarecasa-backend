@@ -153,6 +153,18 @@ class UserDetailsAPIView(APIView):
         user = request.user
         serializer = UserDetailSerializer(user)
         return Response(serializer.data)       
+    
+class UserUpdateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def patch(self, request):
+        user = request.user
+        serializer = UserUpdateSerializer(user, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'detail': 'Detaliile utilizatorului au fost actualizate cu succes.'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
 class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
