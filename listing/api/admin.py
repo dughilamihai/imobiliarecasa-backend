@@ -31,7 +31,7 @@ class CategoryAdmin(admin.ModelAdmin):
     
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ['email', 'username', 'is_staff', 'is_superuser', 'get_user_type_display', 'last_login', 'first_name', 'last_name', 'email_verified', 'receive_email_status', 'is_active', 'created_at']
+    list_display = ['email', 'username', 'is_staff', 'is_superuser', 'get_user_type_display', 'last_login', 'first_name', 'last_name', 'email_verified', 'receive_email_status', 'is_active', 'get_account_type', 'get_company_name', 'created_at']
     search_fields = ("username", "email")
     list_filter = ['subscription__user_type', 'is_staff']   
       
@@ -49,7 +49,25 @@ class UserAdmin(admin.ModelAdmin):
     
     @admin.display(description="Primește email")
     def receive_email_status(self, obj):
-        return "DA" if obj.receive_email else "NU"       
+        return "DA" if obj.receive_email else "NU"   
+    
+    def get_account_type(self, obj):
+        """
+        Returnează tipul utilizacontuluitorului: Persoană Fizică sau Companie.
+        """
+        return dict(User.ACCOUNT_TYPE_CHOICES).get(obj.account_type, "N/A")
+
+    get_account_type.short_description = "Tipul contului"
+
+    def get_company_name(self, obj):
+        """
+        Returnează numele companiei dacă utilizatorul este de tip companie.
+        """
+        if obj.account_type == 'company' and hasattr(obj, 'company_profile'):          
+            return obj.company_profile.company_name
+        return "-"
+    
+    get_company_name.short_description = "Nume Companie"        
 
     class Meta:
         model = User
@@ -64,7 +82,12 @@ class UserTypeAdmin(admin.ModelAdmin):
 class UserSubscriptionAdmin(admin.ModelAdmin):
     list_display = ('user', 'user_type', 'start_date', 'end_date', 'is_active_field')
     search_fields = ('user__username', 'user__email')
-    list_filter = ('user_type', 'is_active_field')  # Folosește câmpul calculat pentru filtrare    
+    list_filter = ('user_type', 'is_active_field')  # Folosește câmpul calculat pentru filtrare   
+    
+@admin.register(CompanyProfile)
+class CompanyProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'company_name', 'registration_number', 'website']
+    search_fields = ['company_name', 'registration_number']     
 
 class EmailConfirmationTokenAdmin(admin.ModelAdmin):
     list_display = ('id', 'created_at', 'user')

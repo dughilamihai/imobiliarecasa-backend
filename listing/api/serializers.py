@@ -36,12 +36,13 @@ class CategorySerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     confirm_password = serializers.CharField(write_only=True)
+    account_type = serializers.ChoiceField(choices=User.ACCOUNT_TYPE_CHOICES)  # Adaugă câmpul ACCOUNT_TYPE_CHOICES    
 
     class Meta:
         model = User
         fields = [
             'id', 'email', 'username', 'password', 'confirm_password',
-            'first_name', 'last_name', 'hashed_ip_address', 'created_at', 'full_name', 'has_accepted_tos', 'is_active'
+            'first_name', 'last_name', 'hashed_ip_address', 'created_at', 'full_name', 'has_accepted_tos', 'is_active', 'account_type'
         ]
         extra_kwargs = {
             'password': {'write_only': True, 'validators': [validate_password]},
@@ -135,11 +136,12 @@ class UserSerializer(serializers.ModelSerializer):
     
 class UserDetailSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
-    user_type = serializers.SerializerMethodField()    
+    user_type = serializers.SerializerMethodField()   
+    account_type_display = serializers.CharField(source='get_account_type_display', read_only=True)     
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'username', 'first_name', 'last_name', 'full_name', 'has_accepted_tos', 'user_type']
+        fields = ['id', 'email', 'username', 'first_name', 'last_name', 'full_name', 'has_accepted_tos', 'user_type', 'account_type_display']
 
     def get_full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}".strip()   
@@ -202,9 +204,10 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     email = serializers.EmailField()  # Exclude validarea automată `unique=True`    
+    account_type_display = serializers.CharField(source='get_account_type_display', read_only=True)    
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name']
+        fields = ['email', 'first_name', 'last_name', 'account_type_display']
 
     def validate_first_name(self, value):
         """
@@ -225,6 +228,16 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         if len(value) > 89:  # 89 în loc de 90 pentru personalizare
             raise serializers.ValidationError("Numele nu poate depăși 89 de caractere.")
         return value 
+    
+    def validate(self, attrs):
+            """
+            Validează dacă `account_type` este trimis și aruncă eroare.
+            """
+            if 'account_type' in self.initial_data:
+                raise serializers.ValidationError(
+                    {"account_type": "Tipul contului nu poate fi modificat după crearea utilizatorului."}
+                )
+            return attrs    
 
     
 # for email confirmations
