@@ -155,8 +155,10 @@ class UserType(models.Model):
     
 
 class User(AbstractUser):
+    ACCOUNT_TYPE_CHOICES = [ ('person', 'Persoană Fizică'), ('company', 'Companie'), ]    
     email = models.EmailField(unique=True)    
     id = models.UUIDField(primary_key=True, db_index=True, unique=True, default=uuid4, editable=False)
+    account_type = models.CharField(max_length=10, choices=ACCOUNT_TYPE_CHOICES, default='person')    
     email_verified = models.BooleanField(default=False)  
     receive_email = models.BooleanField(default=False)      
     first_name = models.CharField(max_length=60, blank=False, null=False)
@@ -261,3 +263,24 @@ class EmailConfirmationToken(models.Model):
         def __str__(self):
             return str(self.id)  # Convert UUID to string               
 
+class CompanyProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='company_profile')
+    registration_number = models.CharField(max_length=255, unique=True)
+    company_name = models.CharField(max_length=255)
+    website = models.URLField(null=True, blank=True)
+    linkedin_url = models.URLField(null=True, blank=True)
+    facebook_url = models.URLField(null=True, blank=True)
+    
+    def clean(self):
+        # Validare: verifică dacă utilizatorul este de tip 'company'
+        if self.user.user_type != 'company':
+            raise ValidationError({"user": "Profilul de companie poate fi asociat doar unui utilizator de tip 'companie'."})
+
+    def save(self, *args, **kwargs):
+        # Apelăm `clean` pentru a efectua validarea
+        self.clean()
+        # Apelul metodei `save` a clasei părinte
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.company_name
