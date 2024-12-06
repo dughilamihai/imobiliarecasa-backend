@@ -284,3 +284,27 @@ class CompanyProfile(models.Model):
 
     def __str__(self):
         return self.company_name
+    
+from django.core.validators import RegexValidator
+
+class Address(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)   
+    strada = models.CharField(max_length=255, null=False, blank=False)
+    strada_numar = models.CharField(
+        max_length=10, 
+        null=False, 
+        blank=False,
+        validators=[RegexValidator(r'^\d+$', 'Numărul străzii trebuie să fie un număr.')]  # Validare pentru numărul străzii
+    )    
+    oras = models.CharField(max_length=255, null=False, blank=False)
+    judet = models.CharField(max_length=255, null=False, blank=False)
+    cod_postal = models.CharField(
+        max_length=20, 
+        null=True, 
+        blank=True,
+        validators=[RegexValidator(r'^\d{6}$', 'Codul poștal trebuie să fie format din 6 cifre.')]  # Validare pentru codul poștal
+    )
+    tara = models.CharField(max_length=255, null=False, blank=False)
+    
+    def __str__(self):
+        return f"Adresa {self.user.username} - {self.strada} {self.strada_numar}, {self.oras}, {self.judet}, {self.tara}"    

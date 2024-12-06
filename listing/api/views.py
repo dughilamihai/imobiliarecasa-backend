@@ -221,4 +221,48 @@ class ChangePasswordView(APIView):
                 return Response({'message': 'Nu am reușit să blacklistez token-ul refresh.', 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({'detail': 'Parola a fost schimbată cu succes.'}, status=status.HTTP_200_OK)
+    
+class UserAddressAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            address = Address.objects.get(user=request.user)
+            serializer = AddressSerializer(address)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Address.DoesNotExist:
+            return Response({"detail": "Adresa nu există pentru acest utilizator."}, status=status.HTTP_404_NOT_FOUND)
+        
+    def post(self, request):
+        """
+        Creează o adresă nouă pentru utilizatorul autentificat.
+        """
+        try:
+            if Address.objects.filter(user=request.user).exists():
+                return Response({"detail": "Adresa există deja pentru acest utilizator."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = AddressSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(user=request.user)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except ValidationError as e:  # Tratare erori de validare
+            return Response({"detail": e.message}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:  # Erori neprevăzute
+            return Response({"detail": "Eroare internă."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
+
+    def patch(self, request):
+        try:
+            address, created = Address.objects.get_or_create(user=request.user)
+            serializer = AddressSerializer(address, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except ValidationError as e:  # Tratare erori de validare
+            return Response({"detail": e.message}, status=status.HTTP_400_BAD_REQUEST)
+        except Address.DoesNotExist:  # Dacă adresa nu este găsită
+            return Response({"detail": "Adresa nu există."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:  # Erori neprevăzute
+            return Response({"detail": "Eroare internă."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
 

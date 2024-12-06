@@ -87,7 +87,12 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
 @admin.register(CompanyProfile)
 class CompanyProfileAdmin(admin.ModelAdmin):
     list_display = ['user', 'company_name', 'registration_number', 'website']
-    search_fields = ['company_name', 'registration_number']     
+    search_fields = ['company_name', 'registration_number']    
+    
+@admin.register(Address)
+class AddressAdmin(admin.ModelAdmin):
+    list_display = ('user', 'strada', 'strada_numar', 'oras', 'judet', 'cod_postal', 'tara')
+    search_fields = ('user__email', 'oras', 'judet', 'tara')     
 
 class EmailConfirmationTokenAdmin(admin.ModelAdmin):
     list_display = ('id', 'created_at', 'user')

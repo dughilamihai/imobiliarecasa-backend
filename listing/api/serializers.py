@@ -239,6 +239,10 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 )
             return attrs    
 
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = ['strada', 'strada_numar', 'oras', 'judet', 'cod_postal', 'tara']
     
 # for email confirmations
 class EmailSerializer(serializers.Serializer):
