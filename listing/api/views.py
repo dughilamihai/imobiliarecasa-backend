@@ -266,3 +266,36 @@ class UserAddressAPIView(APIView):
         except Exception as e:  # Erori neprevăzute
             return Response({"detail": "Eroare internă."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
 
+class CompanyProfileAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            profile = CompanyProfile.objects.get(user=request.user)
+            serializer = CompanyProfileSerializer(profile)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except CompanyProfile.DoesNotExist:
+            return Response({"detail": "Profilul companiei nu există."}, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request):
+        serializer = CompanyProfileSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request):
+        try:
+            profile = CompanyProfile.objects.get(user=request.user)
+            serializer = CompanyProfileSerializer(
+                profile, 
+                data=request.data, 
+                partial=True, 
+                context={'request': request}  # Adăugare context
+            )
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except CompanyProfile.DoesNotExist:
+            return Response({"detail": "Profilul companiei nu există."}, status=status.HTTP_404_NOT_FOUND)

@@ -273,7 +273,7 @@ class CompanyProfile(models.Model):
     
     def clean(self):
         # Validare: verifică dacă utilizatorul este de tip 'company'
-        if self.user.user_type != 'company':
+        if self.user.account_type != 'company':
             raise ValidationError({"user": "Profilul de companie poate fi asociat doar unui utilizator de tip 'companie'."})
 
     def save(self, *args, **kwargs):

@@ -243,6 +243,28 @@ class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
         fields = ['strada', 'strada_numar', 'oras', 'judet', 'cod_postal', 'tara']
+
+class CompanyProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompanyProfile
+        fields = ['registration_number', 'company_name', 'website', 'linkedin_url', 'facebook_url']
+
+    def validate_company_name(self, value):
+        if not value or value.strip() == "":
+            raise serializers.ValidationError("Numele companiei este obligatoriu.")
+        return value
+    
+    def validate(self, data):
+        # Validare: Utilizatorul trebuie să fie de tip 'companie'
+        request_user = self.context['request'].user
+        if request_user.account_type != 'company':
+            raise serializers.ValidationError({"user": "Profilul de companie poate fi asociat doar unui utilizator de tip 'companie'."})
+        return data
+
+    def create(self, validated_data):
+        # Asigură-te că profilul este creat doar pentru utilizatorul curent
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)    
     
 # for email confirmations
 class EmailSerializer(serializers.Serializer):
