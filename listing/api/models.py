@@ -18,6 +18,10 @@ from django.utils import timezone
 from django.utils.timezone import now
 import hashlib
 
+# for listings
+from django_resized import ResizedImageField
+from django_bleach.models import BleachField
+
 class County(models.Model):
     # Câmpuri de bază
     name = models.CharField(max_length=100, unique=True)
@@ -308,3 +312,79 @@ class Address(models.Model):
     
     def __str__(self):
         return f"Adresa {self.user.username} - {self.strada} {self.strada_numar}, {self.oras}, {self.judet}, {self.tara}"    
+    
+
+class Listing(models.Model):
+    STATUS_CHOICES = [
+        (0, 'Inactive'),
+        (1, 'Active'),
+        (3, 'Rejected'),
+    ]
+    
+    CURRENCY_CHOICES = [
+        (0, 'Lei'),
+        (1, 'EUR'),
+    ]
+    
+    # Câmpuri de bază
+    title = models.CharField(max_length=200, db_index=True)
+    description = BleachField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.SmallIntegerField(choices=CURRENCY_CHOICES, default=0)
+    status = models.SmallIntegerField(choices=STATUS_CHOICES, default=0, db_index=True)
+    
+    # Relații
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_listings')
+    county = models.ForeignKey(County, on_delete=models.CASCADE, related_name='county_listings')
+    city = models.ForeignKey(City, on_delete=models.CASCADE, related_name='city_listings')
+    neighborhood = models.ForeignKey(Neighborhood, on_delete=models.SET_NULL, null=True, blank=True, related_name='neighborhood_listings')
+    category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='category_listings')
+
+    # Imagini
+    photo1 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings')
+    photo2 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
+    photo3 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
+    photo4 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
+    photo5 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
+    photo6 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
+    photo7 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
+    photo8 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True) 
+    photo9 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)       
+
+    # Link pentru videoclip
+    video_url = models.URLField(max_length=500, blank=True, null=True)
+
+    # Locație
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
+
+    # Date și statistici
+    created_date = models.DateTimeField(auto_now_add=True)
+    updated_date = models.DateTimeField(auto_now=True)
+    valability_end_date = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Data până la care anunțul este valid."
+    )    
+    views_count = models.BigIntegerField(default=0)
+    like_count = models.IntegerField(default=0)
+    
+    # SEO
+    slug = models.SlugField(max_length=160, unique=True, blank=True)
+    meta_title = models.CharField(max_length=140, blank=True)
+    meta_description = models.CharField(max_length=255, blank=True)
+    
+    def save(self, *args, **kwargs):
+        # Auto-generate slug din titlu, dacă slug-ul nu este specificat
+        if not self.slug:
+            self.slug = slugify(self.title)
+        super(Listing, self).save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.title} - {self.price} {dict(self.CURRENCY_CHOICES).get(self.currency)}"
+
+    class Meta:
+        verbose_name = "Listing"
+        verbose_name_plural = "Listings"
+        ordering = ['-created_date']
+    

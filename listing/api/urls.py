@@ -17,6 +17,6 @@ urlpatterns = [
     path('confirm-email/', confirm_email_view, name='confirm_email_view'),  
     path('schimba-parola/', ChangePasswordView.as_view(), name='change-password'),
     path('user-update/', UserUpdateAPIView.as_view(), name='user-update'),           
-    # path('listings/', views.listing_list, name='listing_list'),
+    path('listings/', ListingAPIView.as_view(), name='listing-list'),
     # path('listings/<int:id>/', views.listing_detail, name='listing_detail'),
 ]
