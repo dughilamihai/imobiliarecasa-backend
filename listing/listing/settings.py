@@ -49,7 +49,9 @@ INSTALLED_APPS = [
     'api',
     'django_cleanup',  # delete the image aftere deleteing the model  
     'rest_framework_simplejwt', 
-    'rest_framework_simplejwt.token_blacklist',         
+    'rest_framework_simplejwt.token_blacklist',  
+    'django_bleach', # for cleaning htmlfile fields      
+    'django_filters', # for filtering fields         
 ]
 
 MIDDLEWARE = [
@@ -174,6 +176,20 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': False,             # Tokenurile de refresh vechi nu vor fi adăugate în blacklist (nu este relevant dacă rotația este dezactivată).
     "UPDATE_LAST_LOGIN": True,                     # Se va actualiza câmpul `last_login` la fiecare utilizare a unui refresh token.
 }
+
+# for bleach allowed tags
+# Which HTML tags are allowed
+BLEACH_ALLOWED_TAGS = ['p', 'br']
+
+# Strip unknown tags if True, replace with HTML escaped characters if
+# False
+BLEACH_STRIP_TAGS = True
+
+# custom variables
+if DEBUG:
+    PAGE_SIZE = 8
+else:
+    PAGE_SIZE = 32
 
 LOGGING = {
     'version': 1,

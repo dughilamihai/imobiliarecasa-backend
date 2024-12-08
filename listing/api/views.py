@@ -15,6 +15,17 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken
 
+# for filtering
+from django_filters import rest_framework as filters
+from  django_filters.rest_framework import DjangoFilterBackend
+
+# for pagination
+from rest_framework.pagination import PageNumberPagination
+
+# for listing
+# every user will be able to see all the listings, but only logged-in users will be able to add, change, or delete objects.
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+
 import logging
 from .models import *
 from .serializers import *
@@ -299,3 +310,46 @@ class CompanyProfileAPIView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except CompanyProfile.DoesNotExist:
             return Response({"detail": "Profilul companiei nu există."}, status=status.HTTP_404_NOT_FOUND)
+
+class ListingPagination(PageNumberPagination):
+    page_size = settings.PAGE_SIZE
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+class ListingFilter(filters.FilterSet):
+    price_min = filters.NumberFilter(field_name="price", lookup_expr="gte")
+    price_max = filters.NumberFilter(field_name="price", lookup_expr="lte")
+    category = filters.CharFilter(field_name="category", lookup_expr="exact")
+    city_id = filters.NumberFilter(field_name="city__id", lookup_expr="exact")
+
+    class Meta:
+        model = Listing
+        fields = ['category', 'price_min', 'price_max', 'city__id']
+        
+class ListingAPIView(APIView):
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend]
+    pagination_class = ListingPagination
+
+    def get(self, request):
+        """
+        Listare și filtrare Listings.
+        """
+        today = now().date()
+        queryset = Listing.objects.filter(
+            status=1,
+            valability_end_date__gte=today
+        ).order_by('-created_date')
+
+        # Aplicare filtre Django Filter
+        filterset = ListingFilter(request.query_params, queryset=queryset)
+        if not filterset.is_valid():
+            return Response(filterset.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Paginare
+        paginator = self.pagination_class()
+        paginated_queryset = paginator.paginate_queryset(filterset.qs, request)
+
+        # Serializare
+        serializer = ListingSerializer(paginated_queryset, many=True)
+        return paginator.get_paginated_response(serializer.data)        

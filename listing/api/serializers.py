@@ -268,4 +268,40 @@ class CompanyProfileSerializer(serializers.ModelSerializer):
     
 # for email confirmations
 class EmailSerializer(serializers.Serializer):
-    email = serializers.EmailField()     
+    email = serializers.EmailField()    
+    
+class ListingSerializer(serializers.ModelSerializer):
+    county_name = serializers.CharField(source='county.name', read_only=True)
+    city_name = serializers.CharField(source='city.name', read_only=True)
+    neighborhood_name = serializers.CharField(source='neighborhood.name', read_only=True)
+
+    class Meta:
+        model = Listing
+        fields = [
+            'id',
+            'title',
+            'description',
+            'price',
+            'currency',
+            'status',
+            'photo1',
+            'photo2',
+            'photo3',
+            'photo4',
+            'photo5',
+            'photo6',
+            'photo7',
+            'photo8',
+            'photo9',
+            'video_url',
+            'latitude',
+            'longitude',
+            'created_date',
+            'valability_end_date',            
+            'views_count',
+            'like_count',
+            'slug',
+            'county_name',
+            'city_name',
+            'neighborhood_name',
+        ]     
