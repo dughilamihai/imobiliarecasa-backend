@@ -100,14 +100,20 @@ class EmailConfirmationTokenAdmin(admin.ModelAdmin):
 admin.site.register(EmailConfirmationToken, EmailConfirmationTokenAdmin)
 
 class ListingAdmin(admin.ModelAdmin):
-    list_display = ('title', 'status', 'county', 'city', 'neighborhood', 'expired')  # Câmpuri vizibile în lista de admin
+    list_display = ('title', 'status', 'county', 'city', 'neighborhood', 'expired', 'username')  # Câmpuri vizibile în lista de admin
     list_filter = ('city', 'county')  # Permite filtrarea după city și county
     search_fields = ('title', 'county__name', 'city__name')  # Permite căutarea după titlu, county și city
     
     def expired(self, obj):
         return obj.valability_end_date and obj.valability_end_date < timezone.now().date()
 
-    expired.boolean = True  # Display a checkmark or X icon instead of True/False        
+    expired.boolean = True  # Display a checkmark or X icon instead of True/False 
+    
+    # Metodă pentru a afișa username-ul utilizatorului
+    def username(self, obj):
+        return obj.user.username  # Afișează username-ul utilizatorului
+
+    username.short_description = 'Username'  # Etichetă pentru coloană           
 
 admin.site.register(Listing, ListingAdmin)
 

@@ -18,5 +18,6 @@ urlpatterns = [
     path('schimba-parola/', ChangePasswordView.as_view(), name='change-password'),
     path('user-update/', UserUpdateAPIView.as_view(), name='user-update'),           
     path('listings/', ListingAPIView.as_view(), name='listing-list'),
-    # path('listings/<int:id>/', views.listing_detail, name='listing_detail'),
+    path('listings/<int:pk>/', ListingAPIView.as_view(), name='listing-detail'),  # Pentru GET (vizualizare)
+    path('listings/<int:pk>/delete/', ListingDeleteAPIView.as_view(), name='listing-delete'),  # Pentru DELETE
 ]

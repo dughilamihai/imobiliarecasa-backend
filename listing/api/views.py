@@ -362,4 +362,27 @@ class ListingAPIView(APIView):
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)          
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  
+    
+class ListingDeleteAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk, *args, **kwargs):
+        try:
+            listing = Listing.objects.get(pk=pk)
+            if listing.user != request.user:
+                return Response(
+                    {"detail": "Nu aveți permisiunea să ștergeți acest anunț."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            listing.delete()
+            return Response(
+                {"detail": "Anunțul a fost șters cu succes."},
+                status=status.HTTP_204_NO_CONTENT,
+            )
+        except Listing.DoesNotExist:
+            return Response(
+                {"detail": "Anunțul nu a fost găsit."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+            
