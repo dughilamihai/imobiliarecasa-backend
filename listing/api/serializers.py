@@ -13,6 +13,9 @@ import logging
 from rest_framework import serializers
 from .models import *
 
+# for time operations
+from datetime import timedelta
+
 logger = logging.getLogger(__name__)
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -271,9 +274,15 @@ class EmailSerializer(serializers.Serializer):
     email = serializers.EmailField()    
     
 class ListingSerializer(serializers.ModelSerializer):
-    county_name = serializers.CharField(source='county.name', read_only=True)
-    city_name = serializers.CharField(source='city.name', read_only=True)
-    neighborhood_name = serializers.CharField(source='neighborhood.name', read_only=True)
+    county_id = serializers.IntegerField(write_only=True, required=True)  # Acceptă doar ID-ul pentru județ la POST/PUT 
+    city_id = serializers.IntegerField(write_only=True, required=True)    # Acceptă doar ID-ul pentru oraș
+    neighborhood_id = serializers.IntegerField(write_only=True, required=False) # Acceptă doar ID-ul cartierului    
+    category_id = serializers.IntegerField(write_only=True, required=True) # Acceptă doar ID-ul categoriei
+    
+    county_name = serializers.CharField(source='county.name', read_only=True)  # Afișează numele județului
+    city_name = serializers.CharField(source='city.name', read_only=True)      # Afișează numele orașului
+    neighborhood_name = serializers.CharField(source='neighborhood.name', read_only=True)  # Afișează numele cartierului    
+    category_name = serializers.CharField(source='category.name', read_only=True)  # Afișează numele categoriei    
 
     class Meta:
         model = Listing
@@ -301,7 +310,107 @@ class ListingSerializer(serializers.ModelSerializer):
             'views_count',
             'like_count',
             'slug',
-            'county_name',
-            'city_name',
-            'neighborhood_name',
+            'county_id',        # Acceptă ID-ul județului
+            'city_id',          # Acceptă ID-ul orașului
+            'neighborhood_id',  # Acceptă ID-ul cartierului            
+            'category_id',      # Acceptă ID-ul categoriei
+            'county_name',      # Returnează numele județului
+            'city_name',        # Returnează numele orașului
+            'neighborhood_name',# Returnează numele cartierului            
+            'category_name',    # Returnează numele categoriei
         ]     
+
+    def validate(self, data):
+        # Obține ID-urile transmise
+        county_id = data.get('county_id')
+        city_id = data.get('city_id')
+        neighborhood_id = data.get('neighborhood_id')
+        user = self.context['request'].user        
+
+        # Verifică dacă ID-urile obligatorii sunt furnizate
+        if not county_id:
+            raise serializers.ValidationError({'county_id': 'Județul este obligatoriu.'})
+        if not city_id:
+            raise serializers.ValidationError({'city_id': 'Orașul este obligatoriu.'})
+        if not data.get('category_id'):
+            raise serializers.ValidationError({'category_id': 'Categoria este obligatorie.'})
+
+        # Obține obiectele din baza de date
+        county = County.objects.filter(id=county_id).first()
+        city = City.objects.filter(id=city_id).first()
+        neighborhood = Neighborhood.objects.filter(id=neighborhood_id).first() if neighborhood_id else None
+
+        # Validare existență
+        if not county:
+            raise serializers.ValidationError({'county_id': 'Județul selectat nu există.'})
+        if not city:
+            raise serializers.ValidationError({'city_id': 'Orașul selectat nu există.'})
+        
+        if neighborhood_id:
+        # Verifică dacă cartierul există în baza de date
+            exists = Neighborhood.objects.filter(id=neighborhood_id).exists()
+            if not exists:
+                raise serializers.ValidationError({
+                    'neighborhood_id': "Cartierul selectat nu există în baza de date."
+                })
+
+        # Verifică dacă orașul aparține județului
+        if city.county != county:
+            raise serializers.ValidationError({
+                'city_id': "Orașul trebuie să aparțină județului selectat."
+            })
+
+        # Verifică dacă cartierul aparține orașului
+        if neighborhood and neighborhood.city != city:
+            raise serializers.ValidationError({
+                'neighborhood_id': "Cartierul trebuie să aparțină orașului selectat."
+            })
+          
+        # Verifica slug sa fie unic
+        user_hash = hashlib.md5(str(self.context['request'].user.id).encode()).hexdigest()[:6]
+        slug_base = slugify(f"{data['title']} {county.name} {city.name} {user_hash}")
+        
+        if Listing.objects.filter(slug=slug_base).exclude(id=self.instance.id if self.instance else None).exists():
+            raise serializers.ValidationError({"slug": "Slug-ul generat există deja. Vă rugăm să modificați titlul sau alte date pentru a genera un slug unic."})
+
+        # Returnează datele cu slug-ul validat
+        data['slug'] = slug_base
+                    
+        return data
+
+    def validate_valability_end_date(self, value):
+        """
+        Validează că `valability_end_date` este cu cel puțin o zi mai mare decât `created_date`
+        și nu este în trecut.
+        """
+        today = now().date()
+
+        # Verificare dată în trecut
+        if value < today:
+            raise serializers.ValidationError("Data de valabilitate nu poate fi în trecut.")
+
+        # Verificare că este cel puțin cu o zi mai mare decât data curentă
+        min_valid_date = today + timedelta(days=1)
+        if value < min_valid_date:
+            raise serializers.ValidationError("Data de valabilitate trebuie să fie cu cel puțin 1 zi mai mare decât data curentă.")
+        return value
+    
+    def validate_county_id(self, value):
+        if not County.objects.filter(id=value).exists():
+            raise serializers.ValidationError("Județul selectat nu există.")
+        return value
+
+    def validate_city_id(self, value):
+        if not City.objects.filter(id=value).exists():
+            raise serializers.ValidationError("Orașul selectat nu există.")
+        return value
+
+    def validate_category_id(self, value):
+        if not Category.objects.filter(id=value).exists():
+            raise serializers.ValidationError("Categoria selectată nu există.")
+        return value  
+    
+    def validate_slug(self, value):
+        if Listing.objects.filter(slug=value).exists():
+            raise serializers.ValidationError("Slug-ul trebuie să fie unic. Slug-ul specificat există deja.")
+        return value      
