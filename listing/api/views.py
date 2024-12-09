@@ -352,4 +352,14 @@ class ListingAPIView(APIView):
 
         # Serializare
         serializer = ListingSerializer(paginated_queryset, many=True)
-        return paginator.get_paginated_response(serializer.data)        
+        return paginator.get_paginated_response(serializer.data)  
+    
+    def post(self, request):
+        """
+        Creare Listing nou.
+        """
+        serializer = ListingSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)          

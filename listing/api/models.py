@@ -16,6 +16,7 @@ from django.core.exceptions import ValidationError
 import phonenumbers
 from django.utils import timezone
 from django.utils.timezone import now
+from datetime import timedelta
 import hashlib
 
 # for listings
@@ -329,16 +330,42 @@ class Listing(models.Model):
     # Câmpuri de bază
     title = models.CharField(max_length=200, db_index=True)
     description = BleachField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.PositiveIntegerField(
+        help_text="Prețul trebuie să fie un număr întreg și pozitiv."
+    )
     currency = models.SmallIntegerField(choices=CURRENCY_CHOICES, default=0)
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=0, db_index=True)
     
     # Relații
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_listings')
-    county = models.ForeignKey(County, on_delete=models.CASCADE, related_name='county_listings')
-    city = models.ForeignKey(City, on_delete=models.CASCADE, related_name='city_listings')
-    neighborhood = models.ForeignKey(Neighborhood, on_delete=models.SET_NULL, null=True, blank=True, related_name='neighborhood_listings')
-    category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='category_listings')
+    county = models.ForeignKey(
+        County,
+        on_delete=models.CASCADE,
+        related_name='county_listings',
+        null=False,  # Câmp obligatoriu
+        blank=False  # Împiedică formularele să accepte valori goale
+    )
+    neighborhood = models.ForeignKey(
+        Neighborhood,
+        on_delete=models.SET_NULL,
+        related_name='neighborhood_listings',     
+        null=True,
+        blank=True
+    )
+    city = models.ForeignKey(
+        City,
+        on_delete=models.CASCADE,
+        related_name='city_listings',
+        null=False,
+        blank=False
+    )
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.PROTECT,
+        related_name='category_listings',
+        null=False,
+        blank=False
+    )    
 
     # Imagini
     photo1 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings')
@@ -365,7 +392,7 @@ class Listing(models.Model):
         blank=True,
         null=True,
         help_text="Data până la care anunțul este valid."
-    )    
+    )
     views_count = models.BigIntegerField(default=0)
     like_count = models.IntegerField(default=0)
     
@@ -375,10 +402,10 @@ class Listing(models.Model):
     meta_description = models.CharField(max_length=255, blank=True)
     
     def save(self, *args, **kwargs):
-        # Auto-generate slug din titlu, dacă slug-ul nu este specificat
-        if not self.slug:
-            self.slug = slugify(self.title)
-        super(Listing, self).save(*args, **kwargs)
+        if not self.valability_end_date:
+            # Extrage doar data, fără ora
+            self.valability_end_date = (timezone.now() + timedelta(days=30)).date()
+        super(Listing, self).save(*args, **kwargs)    
     
     def __str__(self):
         return f"{self.title} - {self.price} {dict(self.CURRENCY_CHOICES).get(self.currency)}"
