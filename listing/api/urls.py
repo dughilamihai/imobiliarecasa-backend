@@ -20,4 +20,5 @@ urlpatterns = [
     path('listings/', ListingAPIView.as_view(), name='listing-list'),
     path('listings/<slug:slug>/', ListingDetailAPIView.as_view(), name='listing-detail'), # Pentru VIEW
     path('listings/<int:pk>/delete/', ListingDeleteAPIView.as_view(), name='listing-delete'),  # Pentru DELETE
+    path('reports/<slug:slug>/', ReportCreateAPIView.as_view(), name='report-create'), # Ruta pentru a crea un raport
 ]

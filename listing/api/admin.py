@@ -99,6 +99,7 @@ class EmailConfirmationTokenAdmin(admin.ModelAdmin):
 
 admin.site.register(EmailConfirmationToken, EmailConfirmationTokenAdmin)
 
+@admin.register(Listing)
 class ListingAdmin(admin.ModelAdmin):
     list_display = ('title', 'status', 'county', 'city', 'neighborhood', 'expired', 'username')  # Câmpuri vizibile în lista de admin
     list_filter = ('city', 'county')  # Permite filtrarea după city și county
@@ -115,6 +116,16 @@ class ListingAdmin(admin.ModelAdmin):
 
     username.short_description = 'Username'  # Etichetă pentru coloană           
 
-admin.site.register(Listing, ListingAdmin)
+@admin.register(Report)
+class ReportAdmin(admin.ModelAdmin):
+    list_display = ('listing', 'reporter_name', 'reporter_email', 'status', 'ip_address', 'created_at')  # Afișează câmpuri în listă
+    list_filter = ('status', 'created_at')  # Filtrare după status și dată
+    search_fields = ('reporter_name', 'reporter_email', 'reason', 'listing__title')  # Permite căutarea
+    readonly_fields = ('ip_address', 'created_at')  # Câmpuri doar pentru citire
+    list_editable = ('status',)  # Permite editarea statusului direct din listă
+    ordering = ('-created_at',)  # Ordonează după cele mai recente rapoarte
+
+    def has_add_permission(self, request):  # Dezactivează adăugarea manuală a rapoartelor
+        return False
 
 

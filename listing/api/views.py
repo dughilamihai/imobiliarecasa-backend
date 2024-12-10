@@ -425,3 +425,24 @@ class ListingDeleteAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
             
+class ReportCreateAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, slug, *args, **kwargs):
+        try:
+            listing = Listing.objects.get(slug=slug)
+        except Listing.DoesNotExist:
+            return Response({"detail": "Anunțul nu a fost găsit."}, status=status.HTTP_404_NOT_FOUND)
+
+        ip_address = request.META.get('REMOTE_ADDR')  # Obține adresa IP a utilizatorului
+        data = request.data
+        data['listing'] = listing.id
+        data['ip_address'] = ip_address  # Adaugă IP-ul la date
+
+        serializer = ReportSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"detail": "Raportul a fost trimis cu succes."}, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)            
+            

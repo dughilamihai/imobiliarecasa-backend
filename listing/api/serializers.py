@@ -414,3 +414,33 @@ class ListingSerializer(serializers.ModelSerializer):
         if Listing.objects.filter(slug=value).exists():
             raise serializers.ValidationError("Slug-ul trebuie să fie unic. Slug-ul specificat există deja.")
         return value      
+    
+class ReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Report
+        fields = [
+            'id', 
+            'listing', 
+            'reporter_name', 
+            'reporter_email', 
+            'reason', 
+            'ip_address', 
+            'status', 
+            'created_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'status', 'ip_address']  # câmpuri care nu ar trebui modificate de utilizatori
+
+    def validate(self, data):
+        # Validare: același IP nu poate raporta același anunț în ultimele 24 de ore
+        ip_address = data.get('ip_address')
+        listing = data.get('listing')
+        
+        # Verifică dacă raportul a fost deja trimis de același IP pentru același anunț în ultimele 24 de ore
+        if Report.objects.filter(listing=listing, ip_address=ip_address, created_at__gte=now() - timedelta(hours=24)).exists():
+            raise serializers.ValidationError({'ip_address': 'Ai raportat deja acest anunț în ultimele 24 de ore.'})
+        
+        # Validare: motivul raportului să nu fie gol
+        if not data.get('reason'):
+            raise serializers.ValidationError({"reason": "Motivul raportului este obligatoriu."})
+        
+        return data
