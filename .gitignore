@@ -11,7 +11,7 @@ cache/
 media/
 
 # Ignore migrations directory
-listing/api/migrations/
+#listing/api/migrations/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

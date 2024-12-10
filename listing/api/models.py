@@ -414,4 +414,26 @@ class Listing(models.Model):
         verbose_name = "Listing"
         verbose_name_plural = "Listings"
         ordering = ['-created_date']
+        
+class Report(models.Model):
+    PENDING = 'pending'
+    REVIEWED = 'reviewed'
+    DISMISSED = 'dismissed'
+
+    STATUS_CHOICES = [
+        (PENDING, 'Pending'),
+        (REVIEWED, 'Reviewed'),
+        (DISMISSED, 'Dismissed'),
+    ]
+
+    listing = models.ForeignKey('Listing', on_delete=models.CASCADE, related_name='reports')
+    reporter_name = models.CharField(max_length=255)
+    reporter_email = models.EmailField()
+    reason = models.TextField()
+    ip_address = models.GenericIPAddressField(null=True, blank=True)  # Adaugă câmp pentru IP
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)  # Câmp pentru status
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Report for {self.listing.title} by {self.reporter_name}"        
     
