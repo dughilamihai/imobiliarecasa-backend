@@ -319,7 +319,7 @@ class Listing(models.Model):
     STATUS_CHOICES = [
         (0, 'Inactive'),
         (1, 'Active'),
-        (3, 'Rejected'),
+        (2, 'Rejected'),
     ]
     
     CURRENCY_CHOICES = [

@@ -364,6 +364,45 @@ class ListingAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  
     
+# Clasă pentru vizualizare
+class ListingDetailAPIView(APIView):
+    permission_classes = [AllowAny]  # Or IsAuthenticatedOrReadOnly    
+    
+    def get(self, request, slug, *args, **kwargs):
+        try:
+            listing = Listing.objects.get(slug=slug)
+        except Listing.DoesNotExist:
+            return Response(
+                {"detail": "Anunțul nu a fost găsit."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Verifică dacă anunțul este activ sau dacă utilizatorul este proprietar
+        if listing.status != 1 and listing.user != request.user:
+            return Response(
+                {"detail": "Nu aveți permisiunea să accesați acest anunț."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Verifică dacă anunțul a expirat
+        if listing.valability_end_date and listing.valability_end_date < timezone.now().date():
+            # Dacă utilizatorul nu este proprietarul, întoarce mesaj de expirare
+            if listing.user != request.user:
+                return Response(
+                    {"detail": "Anunțul a expirat și nu este accesibil."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+                
+        # Incrementare views_count dacă utilizatorul nu este proprietarul
+        if listing.user != request.user:
+            listing.views_count += 1
+            listing.save(update_fields=['views_count'])  # Optimizează salvarea doar pentru acest câmp
+
+        # Serializare și răspuns
+        serializer = ListingSerializer(listing, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+# Clasă pentru ștergere
 class ListingDeleteAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
