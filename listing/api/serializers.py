@@ -324,8 +324,7 @@ class ListingSerializer(serializers.ModelSerializer):
         # Obține ID-urile transmise
         county_id = data.get('county_id')
         city_id = data.get('city_id')
-        neighborhood_id = data.get('neighborhood_id')
-        user = self.context['request'].user        
+        neighborhood_id = data.get('neighborhood_id')   
 
         # Verifică dacă ID-urile obligatorii sunt furnizate
         if not county_id:
@@ -415,32 +414,138 @@ class ListingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Slug-ul trebuie să fie unic. Slug-ul specificat există deja.")
         return value      
     
+class ListingUpdateSerializer(serializers.ModelSerializer):
+    county_id = serializers.IntegerField(write_only=True, required=False)
+    city_id = serializers.IntegerField(write_only=True, required=False)
+    neighborhood_id = serializers.IntegerField(write_only=True, required=False)
+    category_id = serializers.IntegerField(write_only=True, required=False)
+
+    class Meta:
+        model = Listing
+        fields = [
+            'title',
+            'description',
+            'price',
+            'currency',
+            'status',
+            'photo1',
+            'photo2',
+            'photo3',
+            'photo4',
+            'photo5',
+            'photo6',
+            'photo7',
+            'photo8',
+            'photo9',
+            'video_url',
+            'latitude',
+            'longitude',
+            'valability_end_date',
+            'county_id',
+            'city_id',
+            'neighborhood_id',
+            'category_id',
+            'slug',  # Pentru validare și recalculare
+        ]
+
+    # Validări individuale
+    def validate_county_id(self, value):
+        if not County.objects.filter(id=value).exists():
+            raise serializers.ValidationError("Județul selectat nu există.")
+        return value
+
+    def validate_city_id(self, value):
+        if not City.objects.filter(id=value).exists():
+            raise serializers.ValidationError("Orașul selectat nu există.")
+        return value
+
+    def validate_category_id(self, value):
+        if not Category.objects.filter(id=value).exists():
+            raise serializers.ValidationError("Categoria selectată nu există.")
+        return value
+
+    # Validări complexe (relații între câmpuri)
+    def validate(self, data):
+        if 'county_id' in data:
+            county = County.objects.filter(id=data['county_id']).first()
+            if not county:
+                raise serializers.ValidationError({'county_id': 'Județul selectat nu există.'})
+
+        if 'city_id' in data:
+            city = City.objects.filter(id=data['city_id']).first()
+            if not city:
+                raise serializers.ValidationError({'city_id': 'Orașul selectat nu există.'})
+            if 'county_id' in data and city.county_id != data['county_id']:
+                raise serializers.ValidationError({'city_id': 'Orașul trebuie să aparțină județului selectat.'})
+
+        if 'neighborhood_id' in data:
+            neighborhood = Neighborhood.objects.filter(id=data['neighborhood_id']).first()
+            if not neighborhood:
+                raise serializers.ValidationError({'neighborhood_id': 'Cartierul selectat nu există.'})
+            if 'city_id' in data and neighborhood.city_id != data['city_id']:
+                raise serializers.ValidationError({'neighborhood_id': 'Cartierul trebuie să aparțină orașului selectat.'})
+
+        return data
+
+    # Recalcularea slug-ului în funcție de câmpurile modificate
+    def update(self, instance, validated_data):
+        title = validated_data.get('title', instance.title)
+        county_id = validated_data.get('county_id', instance.county_id)
+        city_id = validated_data.get('city_id', instance.city_id)
+
+        if 'title' in validated_data or 'county_id' in validated_data or 'city_id' in validated_data:
+            county = County.objects.filter(id=county_id).first() if county_id else instance.county
+            city = City.objects.filter(id=city_id).first() if city_id else instance.city
+            if not county or not city:
+                raise serializers.ValidationError("Județul și orașul trebuie să fie valide pentru recalcularea slug-ului.")
+
+            user_hash = hashlib.md5(str(self.context['request'].user.id).encode()).hexdigest()[:6]
+            slug_base = slugify(f"{title} {county.name} {city.name} {user_hash}")
+
+            if Listing.objects.filter(slug=slug_base).exclude(pk=instance.pk).exists():
+                raise serializers.ValidationError("Slug-ul recalculat există deja. Modificați titlul sau alte date.")
+            validated_data['slug'] = slug_base
+
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        instance.save()
+        return instance
+    
+    
 class ReportSerializer(serializers.ModelSerializer):
+    listing = serializers.PrimaryKeyRelatedField(queryset=Listing.objects.all())
+
     class Meta:
         model = Report
         fields = [
-            'id', 
-            'listing', 
-            'reporter_name', 
-            'reporter_email', 
-            'reason', 
-            'ip_address', 
-            'status', 
-            'created_at'
+            'id',
+            'listing',
+            'reporter_name',
+            'reporter_email',
+            'reason',
+            'ip_address',
+            'status',
+            'created_at',
         ]
-        read_only_fields = ['id', 'created_at', 'status', 'ip_address']  # câmpuri care nu ar trebui modificate de utilizatori
+        read_only_fields = ['id', 'created_at', 'status', 'ip_address']
+
+    def validate_listing(self, value):
+        # Verificăm dacă anunțul este activ
+        if value.status != 1:  # 1 = "Active"
+            raise serializers.ValidationError("Anunțul nu este activ.")
+        return value
 
     def validate(self, data):
         # Validare: același IP nu poate raporta același anunț în ultimele 24 de ore
         ip_address = data.get('ip_address')
-        listing = data.get('listing')
-        
-        # Verifică dacă raportul a fost deja trimis de același IP pentru același anunț în ultimele 24 de ore
+        listing = self.initial_data.get('listing')  # Folosim ID-ul setat în view
+
         if Report.objects.filter(listing=listing, ip_address=ip_address, created_at__gte=now() - timedelta(hours=24)).exists():
             raise serializers.ValidationError({'ip_address': 'Ai raportat deja acest anunț în ultimele 24 de ore.'})
-        
-        # Validare: motivul raportului să nu fie gol
+
         if not data.get('reason'):
             raise serializers.ValidationError({"reason": "Motivul raportului este obligatoriu."})
-        
+
         return data
+
+

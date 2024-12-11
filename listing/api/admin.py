@@ -101,31 +101,39 @@ admin.site.register(EmailConfirmationToken, EmailConfirmationTokenAdmin)
 
 @admin.register(Listing)
 class ListingAdmin(admin.ModelAdmin):
-    list_display = ('title', 'status', 'county', 'city', 'neighborhood', 'expired', 'username')  # Câmpuri vizibile în lista de admin
+    # Afișează UUID-ul, alături de alte câmpuri
+    list_display = ('id', 'title', 'status', 'county', 'city', 'neighborhood', 'expired', 'username')  # Afișează UUID-ul
     list_filter = ('city', 'county')  # Permite filtrarea după city și county
-    search_fields = ('title', 'county__name', 'city__name')  # Permite căutarea după titlu, county și city
-    
+    search_fields = ('title', 'county__name', 'city__name', 'id')  # Permite căutarea după UUID (id)
+
     def expired(self, obj):
         return obj.valability_end_date and obj.valability_end_date < timezone.now().date()
 
-    expired.boolean = True  # Display a checkmark or X icon instead of True/False 
+    expired.boolean = True  # Afișează un semn de bifare sau un X în loc de True/False
     
     # Metodă pentru a afișa username-ul utilizatorului
     def username(self, obj):
         return obj.user.username  # Afișează username-ul utilizatorului
 
-    username.short_description = 'Username'  # Etichetă pentru coloană           
+    username.short_description = 'Username'  # Etichetă pentru coloană     
 
 @admin.register(Report)
 class ReportAdmin(admin.ModelAdmin):
-    list_display = ('listing', 'reporter_name', 'reporter_email', 'status', 'ip_address', 'created_at')  # Afișează câmpuri în listă
-    list_filter = ('status', 'created_at')  # Filtrare după status și dată
-    search_fields = ('reporter_name', 'reporter_email', 'reason', 'listing__title')  # Permite căutarea
+    # Afișează UUID-ul asociat raportului
+    list_display = ('listing', 'listing_id', 'reporter_name', 'reporter_email', 'status', 'ip_address', 'created_at')  # Afișează listingul și UUID-ul
+    list_filter = ('status', 'created_at')  # Permite filtrarea după status și dată
+    search_fields = ('reporter_name', 'reporter_email', 'reason', 'listing__title', 'listing__id')  # Permite căutarea după UUID-ul anunțului
     readonly_fields = ('ip_address', 'created_at')  # Câmpuri doar pentru citire
     list_editable = ('status',)  # Permite editarea statusului direct din listă
     ordering = ('-created_at',)  # Ordonează după cele mai recente rapoarte
 
     def has_add_permission(self, request):  # Dezactivează adăugarea manuală a rapoartelor
         return False
+
+    # Metodă pentru a adăuga UUID-ul anunțului în lista de Admin
+    def listing_id(self, obj):
+        return obj.listing.id  # Afișează UUID-ul asociat raportului
+
+    listing_id.short_description = 'Listing UUID'  # Etichetă pentru UUID
 
 

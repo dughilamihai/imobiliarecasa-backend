@@ -329,30 +329,22 @@ class ListingFilter(filters.FilterSet):
 class ListingAPIView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend]
+    filterset_class = ListingFilter
     pagination_class = ListingPagination
 
     def get(self, request):
-        """
-        Listare și filtrare Listings.
-        """
-        today = now().date()
         queryset = Listing.objects.filter(
             status=1,
-            valability_end_date__gte=today
+            valability_end_date__gte=now().date()
         ).order_by('-created_date')
 
-        # Aplicare filtre Django Filter
-        filterset = ListingFilter(request.query_params, queryset=queryset)
-        if not filterset.is_valid():
-            return Response(filterset.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        # Paginare
+        # Aplicare paginare directă
         paginator = self.pagination_class()
-        paginated_queryset = paginator.paginate_queryset(filterset.qs, request)
+        paginated_queryset = paginator.paginate_queryset(queryset, request)
 
         # Serializare
         serializer = ListingSerializer(paginated_queryset, many=True)
-        return paginator.get_paginated_response(serializer.data)  
+        return paginator.get_paginated_response(serializer.data)
     
     def post(self, request):
         """
@@ -406,9 +398,10 @@ class ListingDetailAPIView(APIView):
 class ListingDeleteAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def delete(self, request, pk, *args, **kwargs):
+    def delete(self, request, uuid, *args, **kwargs):
         try:
-            listing = Listing.objects.get(pk=pk)
+            # Căutăm listingul folosind uuid în loc de pk
+            listing = Listing.objects.get(pk=uuid)
             if listing.user != request.user:
                 return Response(
                     {"detail": "Nu aveți permisiunea să ștergeți acest anunț."},
@@ -424,25 +417,63 @@ class ListingDeleteAPIView(APIView):
                 {"detail": "Anunțul nu a fost găsit."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-            
+
+class ListingUpdateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, uuid):
+        try:
+            # Căutăm listingul folosind uuid în loc de pk
+            listing = Listing.objects.get(pk=uuid, user=request.user)
+        except Listing.DoesNotExist:
+            return Response({"detail": "Resursa nu a fost găsită."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Dacă anunțul este găsit
+        listing.status = 0  # Setăm statusul ca 'inactive'
+        
+        # Serializăm datele
+        serializer = ListingUpdateSerializer(instance=listing, data=request.data, partial=True, context={'request': request})
+        
+        if serializer.is_valid():
+            # Salvăm anunțul cu statusul actualizat
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class ReportCreateAPIView(APIView):
     permission_classes = [AllowAny]
 
-    def post(self, request, slug, *args, **kwargs):
+    def post(self, request, uuid, *args, **kwargs):
+        # Validare UUID
         try:
-            listing = Listing.objects.get(slug=slug)
+            listing = Listing.objects.get(pk=uuid)
         except Listing.DoesNotExist:
             return Response({"detail": "Anunțul nu a fost găsit."}, status=status.HTTP_404_NOT_FOUND)
+        except ValidationError:  # Dacă UUID-ul are un format incorect
+            return Response({"detail": "UUID invalid."}, status=status.HTTP_400_BAD_REQUEST)
 
-        ip_address = request.META.get('REMOTE_ADDR')  # Obține adresa IP a utilizatorului
+        # Verificăm dacă anunțul este activ
+        if listing.status != 1:  # Folosim valoarea din `STATUS_CHOICES` pentru 'Active'
+            return Response({"detail": "Anunțul nu este activ."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Preluăm datele din request
+        ip_address = request.META.get('REMOTE_ADDR')
         data = request.data
-        data['listing'] = listing.id
-        data['ip_address'] = ip_address  # Adaugă IP-ul la date
+        data['listing'] = listing.id  # Mapăm listing-ul la ID
+        data['ip_address'] = ip_address
+        data['status'] = 'pending'  # Status implicit
 
+        # Validăm și salvăm raportul
         serializer = ReportSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response({"detail": "Raportul a fost trimis cu succes."}, status=status.HTTP_201_CREATED)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+            
             
