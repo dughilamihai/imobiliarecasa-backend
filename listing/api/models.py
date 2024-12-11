@@ -328,6 +328,7 @@ class Listing(models.Model):
     ]
     
     # Câmpuri de bază
+    id = models.UUIDField(primary_key=True, db_index=True, unique=True, default=uuid4, editable=False)       
     title = models.CharField(max_length=200, db_index=True)
     description = BleachField()
     price = models.PositiveIntegerField(

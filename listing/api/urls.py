@@ -19,6 +19,7 @@ urlpatterns = [
     path('user-update/', UserUpdateAPIView.as_view(), name='user-update'),           
     path('listings/', ListingAPIView.as_view(), name='listing-list'),
     path('listings/<slug:slug>/', ListingDetailAPIView.as_view(), name='listing-detail'), # Pentru VIEW
-    path('listings/<int:pk>/delete/', ListingDeleteAPIView.as_view(), name='listing-delete'),  # Pentru DELETE
-    path('reports/<slug:slug>/', ReportCreateAPIView.as_view(), name='report-create'), # Ruta pentru a crea un raport
+    path('listings/<uuid:uuid>/delete/', ListingDeleteAPIView.as_view(), name='listing-delete'),  # Pentru DELETE
+    path('listings/<uuid:uuid>/update/', ListingUpdateAPIView.as_view(), name='listing-update'), # Pentru UPDATE  
+    path('reports/<uuid:uuid>/', ReportCreateAPIView.as_view(), name='report-create'), # Ruta pentru a crea un raport
 ]
