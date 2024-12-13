@@ -280,6 +280,33 @@ class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = ['id', 'name', 'icon_name', 'slug', 'status', 'meta_title', 'meta_description', 'description', 'categories']  
+        
+class TagSimpleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ['id', 'name', 'slug']    
+        
+class CategoryDetailSerializer(serializers.ModelSerializer):
+    parent = serializers.SerializerMethodField()
+    children = serializers.SerializerMethodField()
+    tags = TagSimpleSerializer(many=True)
+
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'slug', 'meta_title', 'meta_description', 'custom_text', 'description', 'parent', 'children', 'tags']
+
+    def get_parent(self, obj):
+        if obj.parent:
+            return {
+                "id": obj.parent.id,
+                "name": obj.parent.name,
+                "slug": obj.parent.slug
+            }
+        return None
+
+    def get_children(self, obj):
+        children = obj.children.all()
+        return CategoryDetailSerializer(children, many=True).data                
     
 class ListingSerializer(serializers.ModelSerializer):
     county_id = serializers.IntegerField(write_only=True, required=True)  # Acceptă doar ID-ul pentru județ la POST/PUT 
