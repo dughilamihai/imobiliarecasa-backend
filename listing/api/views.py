@@ -59,6 +59,19 @@ class CategoryListAV(APIView):
         serializer = CategorySerializer(parent_categories, many=True)
         return Response(serializer.data)
     
+class CategoryDetailAV(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, slug=None, *args, **kwargs):
+        try:
+            # Obține categoria pe baza slug-ului
+            category = Category.objects.prefetch_related('tags', 'children').get(slug=slug)
+            serializer = CategoryDetailSerializer(category)
+            return Response(serializer.data, status=200)
+        except Category.DoesNotExist:
+            return Response({"detail": "Categoria nu a fost găsită."}, status=404)
+    
+    
 # register user        
 class UserRegistrationAPIView(APIView):
     permission_classes = [AllowAny]  # Allow unauthenticated requests
