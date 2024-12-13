@@ -312,8 +312,32 @@ class Address(models.Model):
     tara = models.CharField(max_length=255, null=False, blank=False)
     
     def __str__(self):
-        return f"Adresa {self.user.username} - {self.strada} {self.strada_numar}, {self.oras}, {self.judet}, {self.tara}"    
+        return f"Adresa {self.user.username} - {self.strada} {self.strada_numar}, {self.oras}, {self.judet}, {self.tara}"  
     
+      
+class Tag(models.Model):
+    STATUS = (
+        (0, 'Dezaprobat'),
+        (1, 'Activ'),
+        (2, 'Așteptare'),
+    ) 
+    name = models.CharField(max_length=30, blank=False, unique=True)
+    icon_name = models.CharField(max_length=50, blank=True, null=True)    
+    slug = models.SlugField(max_length=80, unique=True, blank=True)
+    status = models.SmallIntegerField(default=2, db_index=True, choices=STATUS)
+    meta_title = models.CharField(max_length=90, blank=True)
+    meta_description = models.CharField(max_length=255, blank=True)
+    description = models.CharField(max_length=255, blank=True, null=True)  
+    categories = models.ManyToManyField(Category, related_name="tags")      
+    date_created = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)    
 
 class Listing(models.Model):
     STATUS_CHOICES = [
@@ -339,6 +363,7 @@ class Listing(models.Model):
     
     # Relații
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_listings')
+    tag = models.ManyToManyField('Tag', related_name='listings', blank=True)    
     county = models.ForeignKey(
         County,
         on_delete=models.CASCADE,

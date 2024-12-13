@@ -41,7 +41,6 @@ CATEGORIES = [
              "custom_text": "Închirieri apartamente mari, cu 4 sau mai multe camere, pentru spațiu și confort."}
         ]
     },
-    # Repetăm structura similar pentru alte categorii, cum ar fi Case și Vile, Terenuri etc.
     {
         "name": "Case și Vile",
         "description": "Case și vile de vânzare și închiriat în zone urbane și rurale.",
@@ -54,8 +53,68 @@ CATEGORIES = [
              "description": "Închirieri case confortabile, în locații excelente.",
              "custom_text": "Închiriază o casă spațioasă în orașul tău sau la periferie."}
         ]
-    }
-    # Continuăm pentru Terenuri, Birouri și Spații Comerciale, Alte proprietăți etc.
+    },
+    {
+        "name": "Terenuri",
+        "description": "Descoperă terenuri de vânzare pentru construcții, agricultură sau investiții.",
+        "custom_text": "Terenuri de vânzare în zone urbane și rurale, perfecte pentru construcții sau agricultură.",
+        "subcategories": [
+            {"name": "Terenuri pentru construcții", "meta_title": "Terenuri pentru construcții de vânzare", 
+             "meta_description": "Terenuri pentru construcții de vânzare, ideale pentru proiectele tale.", 
+             "description": "Găsește terenuri potrivite pentru construcții în locații excelente.", 
+             "custom_text": "Terenuri pentru construcții în zone rezidențiale sau comerciale, la prețuri competitive."},
+            {"name": "Terenuri agricole", "meta_title": "Terenuri agricole de vânzare", 
+             "meta_description": "Terenuri agricole de vânzare pentru cultivare și investiții.", 
+             "description": "Vezi terenurile agricole disponibile la vânzare în diferite regiuni.", 
+             "custom_text": "Terenuri agricole de calitate, potrivite pentru diverse tipuri de culturi."},
+            {"name": "Terenuri industriale", "meta_title": "Terenuri industriale de vânzare", 
+             "meta_description": "Terenuri industriale de vânzare, ideale pentru dezvoltări comerciale.", 
+             "description": "Descoperă terenuri industriale pentru proiecte de mari dimensiuni.", 
+             "custom_text": "Terenuri industriale în locații strategice, ideale pentru afaceri și producție."}
+        ]
+    },
+    {
+        "name": "Birouri și Spații Comerciale",
+        "description": "Birouri și spații comerciale de vânzare și închiriere în orașul tău.",
+        "custom_text": "Spații comerciale și birouri disponibile pentru vânzare sau închiriere, ideale pentru afaceri de succes.",
+        "subcategories": [
+            {"name": "Birouri de închiriat", "meta_title": "Birouri de închiriat", 
+             "meta_description": "Găsește birouri de închiriat pentru afacerea ta.", 
+             "description": "Închirieri birouri moderne și spațioase în locații centrale.", 
+             "custom_text": "Birouri complet echipate de închiriat, potrivite pentru afaceri mici și mari."},
+            {"name": "Birouri de vânzare", "meta_title": "Birouri de vânzare", 
+             "meta_description": "Cumpără birouri pentru afacerea ta.", 
+             "description": "Birouri de vânzare în clădiri moderne și accesibile.", 
+             "custom_text": "Investiții în birouri de vânzare, în locații premium pentru afacerea ta."},
+            {"name": "Spații comerciale de închiriat", "meta_title": "Spații comerciale de închiriat", 
+             "meta_description": "Închiriază spații comerciale potrivite afacerii tale.", 
+             "description": "Spații comerciale de închiriat în zone centrale și periferice.", 
+             "custom_text": "Închirieri spații comerciale, perfecte pentru magazine, restaurante sau birouri."},
+            {"name": "Spații comerciale de vânzare", "meta_title": "Spații comerciale de vânzare", 
+             "meta_description": "Spații comerciale de vânzare în locații strategice.", 
+             "description": "Găsește spații comerciale ideale pentru investiții de succes.", 
+             "custom_text": "Cumpără spații comerciale în zone cu trafic intens pentru afacerea ta."}
+        ]
+    },
+    {
+        "name": "Alte proprietăți",
+        "description": "Proprietăți speciale de vânzare sau închiriere pentru diverse nevoi.",
+        "custom_text": "Explorează proprietăți unice, cum ar fi hale industriale, pensiuni sau depozite, disponibile pentru vânzare sau închiriere.",
+        "subcategories": [
+            {"name": "Hale industriale", "meta_title": "Hale industriale de vânzare și închiriere", 
+             "meta_description": "Hale industriale de vânzare și închiriere pentru diverse industrii.", 
+             "description": "Găsește hale industriale ideale pentru producție și depozitare.", 
+             "custom_text": "Hale industriale spațioase, perfecte pentru depozite sau linii de producție."},
+            {"name": "Pensiuni și hoteluri", "meta_title": "Pensiuni și hoteluri de vânzare și închiriere", 
+             "meta_description": "Pensiuni și hoteluri disponibile pentru vânzare și închiriere.", 
+             "description": "Descoperă pensiuni și hoteluri pentru investiții în turism.", 
+             "custom_text": "Investiții în pensiuni și hoteluri din zone turistice de top."},
+            {"name": "Depozite", "meta_title": "Depozite de vânzare și închiriere", 
+             "meta_description": "Depozite spațioase disponibile pentru închiriere sau cumpărare.", 
+             "description": "Găsește depozite perfecte pentru logistică și stocare.", 
+             "custom_text": "Depozite de închiriat sau vânzare în locații industriale strategice."}
+        ]
+    },
 ]
 
 class Command(BaseCommand):
