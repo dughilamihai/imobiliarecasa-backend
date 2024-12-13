@@ -310,6 +310,18 @@ class CompanyProfileAPIView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except CompanyProfile.DoesNotExist:
             return Response({"detail": "Profilul companiei nu există."}, status=status.HTTP_404_NOT_FOUND)
+        
+class TagListView(APIView):
+    permission_classes = [AllowAny]    
+    def get(self, request):
+        # Filtrăm tag-urile pentru a obține doar cele active (status = 1)
+        tags = Tag.objects.filter(status=1)
+        
+        # Serializăm datele
+        serializer = TagSerializer(tags, many=True)
+        
+        # Returnăm răspunsul cu tag-urile active
+        return Response(serializer.data)        
 
 class ListingPagination(PageNumberPagination):
     page_size = settings.PAGE_SIZE

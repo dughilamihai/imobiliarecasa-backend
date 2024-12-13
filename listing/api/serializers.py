@@ -273,6 +273,14 @@ class CompanyProfileSerializer(serializers.ModelSerializer):
 class EmailSerializer(serializers.Serializer):
     email = serializers.EmailField()    
     
+class TagSerializer(serializers.ModelSerializer):
+    # Serializare pentru câmpul 'categories' care este o relație ManyToMany
+    categories = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), many=True)
+
+    class Meta:
+        model = Tag
+        fields = ['id', 'name', 'icon_name', 'slug', 'status', 'meta_title', 'meta_description', 'description', 'categories']  
+    
 class ListingSerializer(serializers.ModelSerializer):
     county_id = serializers.IntegerField(write_only=True, required=True)  # Acceptă doar ID-ul pentru județ la POST/PUT 
     city_id = serializers.IntegerField(write_only=True, required=True)    # Acceptă doar ID-ul pentru oraș
@@ -283,6 +291,9 @@ class ListingSerializer(serializers.ModelSerializer):
     city_name = serializers.CharField(source='city.name', read_only=True)      # Afișează numele orașului
     neighborhood_name = serializers.CharField(source='neighborhood.name', read_only=True)  # Afișează numele cartierului    
     category_name = serializers.CharField(source='category.name', read_only=True)  # Afișează numele categoriei    
+    
+    # get list of tags
+    tag = TagSerializer(read_only=True, many=True)      
 
     class Meta:
         model = Listing
@@ -318,6 +329,7 @@ class ListingSerializer(serializers.ModelSerializer):
             'city_name',        # Returnează numele orașului
             'neighborhood_name',# Returnează numele cartierului            
             'category_name',    # Returnează numele categoriei
+            'tag',
         ]     
 
     def validate(self, data):
@@ -412,7 +424,7 @@ class ListingSerializer(serializers.ModelSerializer):
     def validate_slug(self, value):
         if Listing.objects.filter(slug=value).exists():
             raise serializers.ValidationError("Slug-ul trebuie să fie unic. Slug-ul specificat există deja.")
-        return value      
+        return value
     
 class ListingUpdateSerializer(serializers.ModelSerializer):
     county_id = serializers.IntegerField(write_only=True, required=False)

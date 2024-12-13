@@ -99,12 +99,19 @@ class EmailConfirmationTokenAdmin(admin.ModelAdmin):
 
 admin.site.register(EmailConfirmationToken, EmailConfirmationTokenAdmin)
 
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ('name', 'status', 'slug', 'date_created')
+    list_filter = ('status',)
+    search_fields = ('name', 'slug')
+
 @admin.register(Listing)
 class ListingAdmin(admin.ModelAdmin):
     # Afișează UUID-ul, alături de alte câmpuri
     list_display = ('id', 'title', 'status', 'county', 'city', 'neighborhood', 'expired', 'username')  # Afișează UUID-ul
-    list_filter = ('city', 'county')  # Permite filtrarea după city și county
+    list_filter = ('city', 'county', 'tag__name')  # Permite filtrarea după city, county și tags
     search_fields = ('title', 'county__name', 'city__name', 'id')  # Permite căutarea după UUID (id)
+    filter_horizontal = ('tag',)  # Permite selecția etichetelor într-un mod intuitiv    
 
     def expired(self, obj):
         return obj.valability_end_date and obj.valability_end_date < timezone.now().date()
