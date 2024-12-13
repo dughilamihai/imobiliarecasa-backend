@@ -422,6 +422,10 @@ class Listing(models.Model):
     views_count = models.BigIntegerField(default=0)
     like_count = models.IntegerField(default=0)
     
+    # Machine learning statistics
+    is_good_deal = models.BooleanField(null=True)  # Etichetă (pont/norm)
+    is_manual_label = models.BooleanField(default=False)  # Etichetare manuală    
+    
     # SEO
     slug = models.SlugField(max_length=160, unique=True, blank=True)
     meta_title = models.CharField(max_length=140, blank=True)
