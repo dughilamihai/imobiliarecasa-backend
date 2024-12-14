@@ -16,6 +16,9 @@ from .models import *
 # for time operations
 from datetime import timedelta
 
+# generating meta tags for listings
+from datetime import datetime
+
 logger = logging.getLogger(__name__)
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -320,7 +323,16 @@ class ListingSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)  # Afișează numele categoriei    
     
     # get list of tags
-    tag = TagSerializer(read_only=True, many=True)      
+    tag = TagSimpleSerializer(read_only=True, many=True)    
+    
+    meta_title = serializers.CharField(read_only=True)
+    meta_description = serializers.CharField(read_only=True)
+    
+    # Câmp pentru tag-uri, acceptă lista de ID-uri
+    tag_ids = serializers.ListField(
+        child=serializers.IntegerField(), write_only=True, required=False
+    )
+  
 
     class Meta:
         model = Listing
@@ -356,7 +368,10 @@ class ListingSerializer(serializers.ModelSerializer):
             'city_name',        # Returnează numele orașului
             'neighborhood_name',# Returnează numele cartierului            
             'category_name',    # Returnează numele categoriei
-            'tag',
+            'tag',    
+            'tag_ids',                
+            'meta_title', 
+            'meta_description',    
         ]     
 
     def validate(self, data):
@@ -453,11 +468,54 @@ class ListingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Slug-ul trebuie să fie unic. Slug-ul specificat există deja.")
         return value
     
+    def create(self, validated_data):
+        
+        tag_ids = validated_data.pop('tag_ids', [])  # Extragem tag_ids din datele validare
+        
+        # Creăm instanța fără tag-uri, fără să setăm meta_title și meta_description
+        instance = super().create(validated_data)
+        
+        # Legăm tag-urile la Listing dacă există ID-uri
+        if tag_ids:
+            tags = Tag.objects.filter(id__in=tag_ids)  # Obținem tag-urile din DB
+            instance.tag.set(tags)  # Legăm tag-urile la Listing folosind set()        
+
+        # Obținem valorile necesare din instanțele asociate
+        city_name = instance.city.name if instance.city else ""
+        category_name = instance.category.name if instance.category else ""
+
+        # Obținem lista de tag-uri asociate instanței de anunț
+        tags = instance.tag.all()  # Obținem tag-urile din baza de date
+        print("tag-uri anunt:",instance.tag)
+        print("tag-uri toate:",tags)        
+        tag_list = ", ".join(tag.name for tag in tags)  # Le convertim într-un string
+
+        # Generăm meta_title și meta_description
+        instance.meta_title = f"{instance.title} ➤ Anunț Imobiliar {city_name}"
+        instance.meta_description = f"{instance.title} ➤ {category_name} ➤ Caracteristici: {tag_list} ➤ Anunț Imobiliar {city_name} {datetime.now().year}"
+
+        # Salvăm modificările
+        instance.save()
+
+        return instance
+
+    
 class ListingUpdateSerializer(serializers.ModelSerializer):
     county_id = serializers.IntegerField(write_only=True, required=False)
     city_id = serializers.IntegerField(write_only=True, required=False)
     neighborhood_id = serializers.IntegerField(write_only=True, required=False)
     category_id = serializers.IntegerField(write_only=True, required=False)
+    
+    # get list of tags
+    tag = TagSimpleSerializer(read_only=True, many=True)       
+    
+    meta_title = serializers.CharField(read_only=True)
+    meta_description = serializers.CharField(read_only=True)
+    
+    # Câmp pentru tag-uri, acceptă lista de ID-uri
+    tag_ids = serializers.ListField(
+        child=serializers.IntegerField(), write_only=True, required=False
+    )    
 
     class Meta:
         model = Listing
@@ -485,6 +543,10 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             'neighborhood_id',
             'category_id',
             'slug',  # Pentru validare și recalculare
+            'tag',              
+            'tag_ids',                
+            'meta_title', 
+            'meta_description',    
         ]
 
     # Validări individuale
@@ -531,7 +593,9 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
         title = validated_data.get('title', instance.title)
         county_id = validated_data.get('county_id', instance.county_id)
         city_id = validated_data.get('city_id', instance.city_id)
+        category_id = validated_data.get('category_id', instance.category_id)
 
+        # Gestionare recalculare slug
         if 'title' in validated_data or 'county_id' in validated_data or 'city_id' in validated_data:
             county = County.objects.filter(id=county_id).first() if county_id else instance.county
             city = City.objects.filter(id=city_id).first() if city_id else instance.city
@@ -545,12 +609,36 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Slug-ul recalculat există deja. Modificați titlul sau alte date.")
             validated_data['slug'] = slug_base
 
+        # Gestionare tag-uri
+        tag_ids = validated_data.pop('tag_ids', None)  # Extragem tag_ids din datele validate
+        if tag_ids is not None:  # Dacă există tag_ids, actualizăm relațiile
+            tags = Tag.objects.filter(id__in=tag_ids)  # Obținem doar tag-urile existente
+            instance.tag.set(tags)  # Asociem tag-urile folosind set()
+
+            # Convertim tag-urile într-un string pentru meta_description
+            tag_list = ", ".join(tag.name for tag in tags)
+        else:
+            tag_list = ", ".join(tag.name for tag in instance.tag.all())  # Folosim tag-urile existente dacă nu s-au trimis noi valori
+
+        # Obținem numele categoriei pentru meta_description
+        category = Category.objects.filter(id=category_id).first() if category_id else instance.category
+        category_name = category.name if category else instance.category.name
+
+        # Obținem numele orașului pentru meta_description
+        city_name = city.name if city else instance.city.name
+
+        # Generăm meta_title și meta_description
+        instance.meta_title = f"{title} ➤ Anunț Imobiliar {city_name}"
+        instance.meta_description = (
+            f"{title} ➤ {category_name} ➤ Caracteristici: {tag_list} ➤ Anunț Imobiliar {city_name} {datetime.now().year}"
+        )
+
+        # Actualizare câmpuri rămase
         for field, value in validated_data.items():
             setattr(instance, field, value)
         instance.save()
         return instance
-    
-    
+ 
 class ReportSerializer(serializers.ModelSerializer):
     listing = serializers.PrimaryKeyRelatedField(queryset=Listing.objects.all())
 

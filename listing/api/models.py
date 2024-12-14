@@ -435,8 +435,16 @@ class Listing(models.Model):
         if not self.valability_end_date:
             # Extrage doar data, fără ora
             self.valability_end_date = (timezone.now() + timedelta(days=30)).date()
-        super(Listing, self).save(*args, **kwargs)    
-    
+            
+        if not self.slug:  # Dacă slug-ul nu este deja setat
+            # Generează un hash unic pe baza utilizatorului
+            user_hash = hashlib.md5(str(self.user.id).encode()).hexdigest()[:6]
+            # Creează baza slug-ului
+            slug_base = slugify(f"{self.title} {self.county.name} {self.city.name} {user_hash}")
+            self.slug = slug_base                         
+                        
+        super(Listing, self).save(*args, **kwargs)  
+      
     def __str__(self):
         return f"{self.title} - {self.price} {dict(self.CURRENCY_CHOICES).get(self.currency)}"
 
