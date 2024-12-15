@@ -332,7 +332,6 @@ class ListingSerializer(serializers.ModelSerializer):
     tag_ids = serializers.ListField(
         child=serializers.IntegerField(), write_only=True, required=False
     )
-  
 
     class Meta:
         model = Listing
@@ -371,14 +370,18 @@ class ListingSerializer(serializers.ModelSerializer):
             'tag',    
             'tag_ids',                
             'meta_title', 
-            'meta_description',    
+            'meta_description', 
+            'compartimentare', 
         ]     
 
     def validate(self, data):
         # Obține ID-urile transmise
         county_id = data.get('county_id')
         city_id = data.get('city_id')
-        neighborhood_id = data.get('neighborhood_id')   
+        neighborhood_id = data.get('neighborhood_id')  
+        
+        # Obține categoria
+        category = Category.objects.get(id=data['category_id']) 
 
         # Verifică dacă ID-urile obligatorii sunt furnizate
         if not county_id:
@@ -426,10 +429,19 @@ class ListingSerializer(serializers.ModelSerializer):
         if Listing.objects.filter(slug=slug_base).exclude(id=self.instance.id if self.instance else None).exists():
             raise serializers.ValidationError({"slug": "Slug-ul generat există deja. Vă rugăm să modificați titlul sau alte date pentru a genera un slug unic."})
 
-        # Returnează datele cu slug-ul validat
-        data['slug'] = slug_base
-                    
-        return data
+        # Verifică dacă "compartimentare" este furnizat și aparține grupului
+        compartimentare = data.get('compartimentare')
+
+        if compartimentare is not None:
+            if category.group != 0:
+                raise serializers.ValidationError({
+                    'compartimentare': 'Câmpul "Compartimentare" nu este permis pentru această categorie.'
+                })
+
+            # Returnează datele cu slug-ul validat
+            data['slug'] = slug_base
+                        
+            return data
 
     def validate_valability_end_date(self, value):
         """
@@ -547,6 +559,7 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             'tag_ids',                
             'meta_title', 
             'meta_description',    
+            'compartimentare',            
         ]
 
     # Validări individuale
@@ -567,6 +580,9 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
 
     # Validări complexe (relații între câmpuri)
     def validate(self, data):
+        category_id = data.get('category_id')
+        compartimentare = data.get('compartimentare')
+    
         if 'county_id' in data:
             county = County.objects.filter(id=data['county_id']).first()
             if not county:
@@ -585,6 +601,18 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'neighborhood_id': 'Cartierul selectat nu există.'})
             if 'city_id' in data and neighborhood.city_id != data['city_id']:
                 raise serializers.ValidationError({'neighborhood_id': 'Cartierul trebuie să aparțină orașului selectat.'})
+            
+        # Verificăm categoria doar dacă este furnizată
+        if category_id:
+            category = Category.objects.filter(id=category_id).first()
+            if not category:
+                raise serializers.ValidationError({'category_id': 'Categoria selectată nu există.'})
+
+            # Verificăm regula pentru "compartimentare"
+            if compartimentare is not None and category.group != 0:
+                raise serializers.ValidationError({
+                    'compartimentare': 'Câmpul "Compartimentare" nu este permis pentru această categorie.'
+                })            
 
         return data
 

@@ -22,12 +22,37 @@ class NeighborhoodAdmin(admin.ModelAdmin):
     list_filter = ('city',)
     prepopulated_fields = {"slug": ("name",)}    
 
+from django.contrib import admin
+from .models import Category
+
+# Filtru personalizat pentru câmpul group
+class GroupFilter(admin.SimpleListFilter):
+    title = 'Grup'  # Nume afișat în interfață
+    parameter_name = 'group'  # Parametru în URL
+
+    def lookups(self, request, model_admin):
+        # Returnează opțiunile de filtrare din CATEGORY_GROUP_CHOICES
+        return Category.CATEGORY_GROUP_CHOICES
+
+    def queryset(self, request, queryset):
+        # Filtrează categoriile pe baza valorii selectate
+        if self.value():
+            return queryset.filter(group=self.value())
+        return queryset
+
+# Admin pentru Category
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'parent', 'date_created')
+    list_display = ('name', 'parent', 'get_group_name', 'date_created')  # Afișează numele grupului
     search_fields = ('name', 'parent__name')
-    list_filter = ('parent',)
+    list_filter = ('parent', GroupFilter)  # Adaugă filtrul personalizat
     prepopulated_fields = {"slug": ("name",)}
+
+    def get_group_name(self, obj):
+        # Returnează numele grupului
+        return dict(Category.CATEGORY_GROUP_CHOICES).get(obj.group, 'Nedefinit')
+    get_group_name.short_description = "Grup"  # Nume afișat în admin
+
     
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):

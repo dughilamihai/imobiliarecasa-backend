@@ -103,6 +103,13 @@ class Neighborhood(models.Model):
         ordering = ['name']   
         
 class Category(MPTTModel):
+    CATEGORY_GROUP_CHOICES = [
+        (0, 'Apartamente'),
+        (1, 'Birouri și Spații Comerciale'),
+        (2, 'Case și Vile'),
+        (3, 'Terenuri'),
+        (4, 'Alte proprietăți'),
+    ]    
     name = models.CharField(max_length=60, blank=True)   
     parent = TreeForeignKey("self", on_delete=models.PROTECT, null=True, blank=True, related_name='children')
     slug = models.SlugField(max_length=80, unique=True, blank=True)
@@ -113,6 +120,12 @@ class Category(MPTTModel):
     image = ResizedImageField(size=[160, 160], crop=['middle', 'center'], quality=80, upload_to='category_images/', blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    group = models.SmallIntegerField(
+        choices=CATEGORY_GROUP_CHOICES,
+        null=True,
+        blank=True,
+        db_index=True
+    )    
     date_created = models.DateTimeField(auto_now_add=True, null=True)
 
     class Meta:
@@ -345,10 +358,15 @@ class Listing(models.Model):
         (1, 'Active'),
         (2, 'Rejected'),
     ]
-    
     CURRENCY_CHOICES = [
         (0, 'Lei'),
         (1, 'EUR'),
+    ]
+    COMPARTIMENTARE_CHOICES = [
+        (0, 'Decomandat'),
+        (1, 'Semidecomandat'),
+        (2, 'Nedecomandat'),
+        (3, 'Circular'),
     ]
     
     # Câmpuri de bază
@@ -425,6 +443,14 @@ class Listing(models.Model):
     # Machine learning statistics
     is_good_deal = models.BooleanField(null=True)  # Etichetă (pont/norm)
     is_manual_label = models.BooleanField(default=False)  # Etichetare manuală    
+    
+    # Campuri aditionale
+    compartimentare = models.SmallIntegerField(
+        choices=COMPARTIMENTARE_CHOICES,
+        null=True,
+        blank=True,
+        db_index=True
+    )
     
     # SEO
     slug = models.SlugField(max_length=160, unique=True, blank=True)
