@@ -373,7 +373,8 @@ class ListingSerializer(serializers.ModelSerializer):
             'meta_description', 
             'compartimentare', 
             'zonare',
-        ]     
+            'suprafata_utila',
+        ]    
 
     def validate(self, data):
         # Obține ID-urile transmise
@@ -486,37 +487,24 @@ class ListingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Slug-ul trebuie să fie unic. Slug-ul specificat există deja.")
         return value
     
-    def create(self, validated_data):
+    def validate_suprafata_utila(self, value):
+        # Verificăm dacă valoarea este pozitivă
+        if value is not None and value <= 0:
+            raise serializers.ValidationError("Suprafața utilă trebuie să fie mai mare decât 0.")
         
-        tag_ids = validated_data.pop('tag_ids', [])  # Extragem tag_ids din datele validare
+        # Adaugă alte validări dacă este cazul
+        if value is not None and value > 10000000:  # Limita maximă teoretică (10 milioane de m²)
+            raise serializers.ValidationError("Suprafața utilă este prea mare.")
         
-        # Creăm instanța fără tag-uri, fără să setăm meta_title și meta_description
-        instance = super().create(validated_data)
-        
-        # Legăm tag-urile la Listing dacă există ID-uri
-        if tag_ids:
-            tags = Tag.objects.filter(id__in=tag_ids)  # Obținem tag-urile din DB
-            instance.tag.set(tags)  # Legăm tag-urile la Listing folosind set()        
-
-        # Obținem valorile necesare din instanțele asociate
-        city_name = instance.city.name if instance.city else ""
-        category_name = instance.category.name if instance.category else ""
-
-        # Obținem lista de tag-uri asociate instanței de anunț
-        tags = instance.tag.all()  # Obținem tag-urile din baza de date    
-        tag_list = ", ".join(tag.name for tag in tags)  # Le convertim într-un string
-
-        # Generăm meta_title și meta_description
-        instance.meta_title = f"{instance.title} ➤ Anunț Imobiliar {city_name}"
-        instance.meta_description = f"{instance.title} ➤ {category_name} ➤ Caracteristici: {tag_list} ➤ Anunț Imobiliar {city_name} {datetime.now().year}"
-
-        # Salvăm modificările
-        instance.save()
-
-        return instance
+        return value    
     
     def create(self, validated_data):
         tag_ids = validated_data.pop('tag_ids', [])  # Extragem tag_ids din datele validate
+        
+        # Rotunjim la 2 zecimale suprafata utila
+        suprafata_utila = validated_data.get('suprafata_utila')
+        if suprafata_utila is not None:
+            validated_data['suprafata_utila'] = round(suprafata_utila, 2)          
         
         # Creăm instanța fără tag-uri, fără să setăm meta_title și meta_description
         instance = super().create(validated_data)
@@ -633,7 +621,8 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             'meta_title', 
             'meta_description',    
             'compartimentare',
-            'zonare',                   
+            'zonare', 
+            'suprafata_utila',                              
         ]
 
     # Validări individuale
@@ -697,10 +686,26 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
 
         return data
     
+    def validate_suprafata_utila(self, value):
+        # Verificăm dacă valoarea este pozitivă
+        if value is not None and value <= 0:
+            raise serializers.ValidationError("Suprafața utilă trebuie să fie mai mare decât 0.")
+        
+        # Adaugă alte validări dacă este cazul
+        if value is not None and value > 10000000:  # Limita maximă teoretică (10 milioane de m²)
+            raise serializers.ValidationError("Suprafața utilă este prea mare.")
+        
+        return value    
+    
     def update(self, instance, validated_data):
         title = validated_data.get('title', instance.title)
         county_id = validated_data.get('county_id', instance.county_id)
         city_id = validated_data.get('city_id', instance.city_id)
+        
+        # Rotunjim la 2 zecimale suprafata utila
+        suprafata_utila = validated_data.get('suprafata_utila')
+        if suprafata_utila is not None:
+            validated_data['suprafata_utila'] = round(suprafata_utila, 2)           
 
         # Obține valori pentru county și city
         county = County.objects.filter(id=county_id).first() if county_id else instance.county

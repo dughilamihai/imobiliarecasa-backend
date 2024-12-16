@@ -461,6 +461,11 @@ class Listing(models.Model):
         blank=True,
         db_index=True,        
         help_text="Zonarea poate fi intravilan, extravilan sau necompletată."
+    ) 
+    suprafata_utila = models.FloatField(
+        "Suprafață utilă",
+        null=True,
+        blank=True
     )    
     
     # SEO
