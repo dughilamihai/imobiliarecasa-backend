@@ -372,6 +372,7 @@ class ListingSerializer(serializers.ModelSerializer):
             'meta_title', 
             'meta_description', 
             'compartimentare', 
+            'zonare',
         ]     
 
     def validate(self, data):
@@ -379,6 +380,8 @@ class ListingSerializer(serializers.ModelSerializer):
         county_id = data.get('county_id')
         city_id = data.get('city_id')
         neighborhood_id = data.get('neighborhood_id')  
+        compartimentare = data.get('compartimentare')
+        zonare = data.get('zonare')          
         
         # Obține categoria
         category = Category.objects.get(id=data['category_id']) 
@@ -429,19 +432,22 @@ class ListingSerializer(serializers.ModelSerializer):
         if Listing.objects.filter(slug=slug_base).exclude(id=self.instance.id if self.instance else None).exists():
             raise serializers.ValidationError({"slug": "Slug-ul generat există deja. Vă rugăm să modificați titlul sau alte date pentru a genera un slug unic."})
 
-        # Verifică dacă "compartimentare" este furnizat și aparține grupului
-        compartimentare = data.get('compartimentare')
+        # Verificăm regula pentru "compartimentare"
+        if compartimentare is not None and category.group != 0:
+            raise serializers.ValidationError({
+                'compartimentare': 'Câmpul "Compartimentare" nu este permis pentru această categorie.'
+            })    
+            
+        # Verificăm regula pentru "zonare"
+        if zonare is not None and category.group != 3:
+            raise serializers.ValidationError({
+                'compartimentare': 'Câmpul "Zonare terenuri" nu este permis pentru această categorie.'
+            })    
 
-        if compartimentare is not None:
-            if category.group != 0:
-                raise serializers.ValidationError({
-                    'compartimentare': 'Câmpul "Compartimentare" nu este permis pentru această categorie.'
-                })
-
-            # Returnează datele cu slug-ul validat
-            data['slug'] = slug_base
-                        
-            return data
+        # Returnează datele cu slug-ul validat
+        data['slug'] = slug_base
+                    
+        return data
 
     def validate_valability_end_date(self, value):
         """
@@ -497,9 +503,7 @@ class ListingSerializer(serializers.ModelSerializer):
         category_name = instance.category.name if instance.category else ""
 
         # Obținem lista de tag-uri asociate instanței de anunț
-        tags = instance.tag.all()  # Obținem tag-urile din baza de date
-        print("tag-uri anunt:",instance.tag)
-        print("tag-uri toate:",tags)        
+        tags = instance.tag.all()  # Obținem tag-urile din baza de date    
         tag_list = ", ".join(tag.name for tag in tags)  # Le convertim într-un string
 
         # Generăm meta_title și meta_description
@@ -510,13 +514,78 @@ class ListingSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+    
+    def create(self, validated_data):
+        tag_ids = validated_data.pop('tag_ids', [])  # Extragem tag_ids din datele validate
+        
+        # Creăm instanța fără tag-uri, fără să setăm meta_title și meta_description
+        instance = super().create(validated_data)
+        
+        # Legăm tag-urile la Listing dacă există ID-uri
+        if tag_ids:
+            tags = Tag.objects.filter(id__in=tag_ids)  # Obținem tag-urile din DB
+            instance.tag.set(tags)  # Legăm tag-urile la Listing folosind set()        
 
+        # Obținem valorile necesare din instanțele asociate
+        city_name = instance.city.name if instance.city else ""
+        category_name = instance.category.name if instance.category else ""
+
+        # Obținem lista de tag-uri asociate instanței de anunț
+        tags = instance.tag.all()  # Obținem tag-urile din baza de date    
+        tag_list = ", ".join(tag.name for tag in tags)  # Le convertim într-un string
+
+        # Construim meta_description
+        description_parts = [
+            instance.title,
+            f"➤ {category_name}",
+        ]
+
+        # Verificăm dacă există caracteristici (compartimentare, zonare, tag-uri)
+        features_added = False
+        features = []
+
+        # Adăugare compartimentare dacă există
+        if instance.compartimentare is not None:
+            compartimentare_text = instance.get_compartimentare_display()
+            features.append(compartimentare_text.capitalize())
+            features_added = True
+
+        # Adăugare zonare dacă există
+        if instance.zonare is not None:
+            zonare_text = instance.get_zonare_display()
+            features.append(zonare_text.capitalize())
+            features_added = True
+
+        # Adăugare tag_list dacă există tag-uri
+        if tag_list:
+            features.append(tag_list)
+            features_added = True
+
+        # Adăugăm "➤ Caracteristici:" doar dacă există vreo caracteristică
+        if features_added:
+            description_parts.append(f"➤ Caracteristici: {', '.join(features)}")
+
+        description_parts.append(f"➤ Anunț Imobiliar {city_name} {datetime.now().year}")
+
+        # Generăm meta_title și meta_description
+        instance.meta_title = f"{instance.title} ➤ Anunț Imobiliar {city_name}"
+        instance.meta_description = " ".join(description_parts)
+
+        # Salvăm modificările
+        instance.save()
+
+        return instance
     
 class ListingUpdateSerializer(serializers.ModelSerializer):
     county_id = serializers.IntegerField(write_only=True, required=False)
     city_id = serializers.IntegerField(write_only=True, required=False)
     neighborhood_id = serializers.IntegerField(write_only=True, required=False)
     category_id = serializers.IntegerField(write_only=True, required=False)
+    
+    county_name = serializers.CharField(source='county.name', read_only=True)  # Afișează numele județului
+    city_name = serializers.CharField(source='city.name', read_only=True)      # Afișează numele orașului
+    neighborhood_name = serializers.CharField(source='neighborhood.name', read_only=True)  # Afișează numele cartierului    
+    category_name = serializers.CharField(source='category.name', read_only=True)  # Afișează numele categoriei       
     
     # get list of tags
     tag = TagSimpleSerializer(read_only=True, many=True)       
@@ -554,12 +623,17 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             'city_id',
             'neighborhood_id',
             'category_id',
+            'county_name',      # Returnează numele județului
+            'city_name',        # Returnează numele orașului
+            'neighborhood_name',# Returnează numele cartierului            
+            'category_name',    # Returnează numele categoriei            
             'slug',  # Pentru validare și recalculare
             'tag',              
             'tag_ids',                
             'meta_title', 
             'meta_description',    
-            'compartimentare',            
+            'compartimentare',
+            'zonare',                   
         ]
 
     # Validări individuale
@@ -582,6 +656,7 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         category_id = data.get('category_id')
         compartimentare = data.get('compartimentare')
+        zonare = data.get('zonare')        
     
         if 'county_id' in data:
             county = County.objects.filter(id=data['county_id']).first()
@@ -612,24 +687,30 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             if compartimentare is not None and category.group != 0:
                 raise serializers.ValidationError({
                     'compartimentare': 'Câmpul "Compartimentare" nu este permis pentru această categorie.'
-                })            
+                })    
+                
+            # Verificăm regula pentru "zonare"
+            if zonare is not None and category.group != 3:
+                raise serializers.ValidationError({
+                    'compartimentare': 'Câmpul "Zonare terenuri" nu este permis pentru această categorie.'
+                })                          
 
         return data
-
-    # Recalcularea slug-ului în funcție de câmpurile modificate
+    
     def update(self, instance, validated_data):
         title = validated_data.get('title', instance.title)
         county_id = validated_data.get('county_id', instance.county_id)
         city_id = validated_data.get('city_id', instance.city_id)
-        category_id = validated_data.get('category_id', instance.category_id)
+
+        # Obține valori pentru county și city
+        county = County.objects.filter(id=county_id).first() if county_id else instance.county
+        city = City.objects.filter(id=city_id).first() if city_id else instance.city
 
         # Gestionare recalculare slug
         if 'title' in validated_data or 'county_id' in validated_data or 'city_id' in validated_data:
-            county = County.objects.filter(id=county_id).first() if county_id else instance.county
-            city = City.objects.filter(id=city_id).first() if city_id else instance.city
             if not county or not city:
                 raise serializers.ValidationError("Județul și orașul trebuie să fie valide pentru recalcularea slug-ului.")
-
+            
             user_hash = hashlib.md5(str(self.context['request'].user.id).encode()).hexdigest()[:6]
             slug_base = slugify(f"{title} {county.name} {city.name} {user_hash}")
 
@@ -638,32 +719,62 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             validated_data['slug'] = slug_base
 
         # Gestionare tag-uri
-        tag_ids = validated_data.pop('tag_ids', None)  # Extragem tag_ids din datele validate
-        if tag_ids is not None:  # Dacă există tag_ids, actualizăm relațiile
-            tags = Tag.objects.filter(id__in=tag_ids)  # Obținem doar tag-urile existente
-            instance.tag.set(tags)  # Asociem tag-urile folosind set()
-
-            # Convertim tag-urile într-un string pentru meta_description
+        tag_ids = validated_data.pop('tag_ids', None)
+        if tag_ids is not None:
+            tags = Tag.objects.filter(id__in=tag_ids)
+            instance.tag.set(tags)
             tag_list = ", ".join(tag.name for tag in tags)
         else:
-            tag_list = ", ".join(tag.name for tag in instance.tag.all())  # Folosim tag-urile existente dacă nu s-au trimis noi valori
+            tag_list = ", ".join(tag.name for tag in instance.tag.all())
 
-        # Obținem numele categoriei pentru meta_description
+        # Obține valori pentru categoria și orașul curent
+        category_id = validated_data.get('category_id', instance.category_id)
         category = Category.objects.filter(id=category_id).first() if category_id else instance.category
-        category_name = category.name if category else instance.category.name
 
-        # Obținem numele orașului pentru meta_description
+        category_name = category.name if category else instance.category.name
         city_name = city.name if city else instance.city.name
 
-        # Generăm meta_title și meta_description
-        instance.meta_title = f"{title} ➤ Anunț Imobiliar {city_name}"
-        instance.meta_description = (
-            f"{title} ➤ {category_name} ➤ Caracteristici: {tag_list} ➤ Anunț Imobiliar {city_name} {datetime.now().year}"
-        )
+        # Construim meta_description cu compartimentare și zonare
+        description_parts = [
+            title,
+            f"➤ {category_name}",
+        ]
 
-        # Actualizare câmpuri rămase
+        # Verificăm dacă există caracteristici (compartimentare, zonare, tag-uri)
+        features_added = False
+        features = []
+
+        # Adăugare compartimentare dacă există
+        if instance.compartimentare is not None:
+            compartimentare_text = instance.get_compartimentare_display()
+            features.append(compartimentare_text.capitalize())
+            features_added = True
+
+        # Adăugare zonare dacă există
+        if instance.zonare is not None:
+            zonare_text = instance.get_zonare_display()
+            features.append(zonare_text.capitalize())
+            features_added = True
+
+        # Adăugare tag_list dacă există tag-uri
+        if tag_list:
+            features.append(tag_list)
+            features_added = True
+
+        # Adăugăm "➤ Caracteristici:" doar dacă există vreo caracteristică
+        if features_added:
+            description_parts.append(f"➤ Caracteristici: {', '.join(features)}")
+
+        description_parts.append(f"➤ Anunț Imobiliar {city_name} {datetime.now().year}")
+
+        # Setăm meta_title și meta_description
+        instance.meta_title = f"{title} ➤ Anunț Imobiliar {city_name}"
+        instance.meta_description = " ".join(description_parts)
+
+        # Actualizăm câmpurile instanței
         for field, value in validated_data.items():
             setattr(instance, field, value)
+
         instance.save()
         return instance
  

@@ -368,6 +368,10 @@ class Listing(models.Model):
         (2, 'Nedecomandat'),
         (3, 'Circular'),
     ]
+    ZONARE_CHOICES = [
+        (0, 'intravilan'),
+        (1, 'extravilan'),
+    ]    
     
     # Câmpuri de bază
     id = models.UUIDField(primary_key=True, db_index=True, unique=True, default=uuid4, editable=False)       
@@ -451,6 +455,13 @@ class Listing(models.Model):
         blank=True,
         db_index=True
     )
+    zonare = models.SmallIntegerField(
+        choices=ZONARE_CHOICES, 
+        null=True, 
+        blank=True,
+        db_index=True,        
+        help_text="Zonarea poate fi intravilan, extravilan sau necompletată."
+    )    
     
     # SEO
     slug = models.SlugField(max_length=160, unique=True, blank=True)
