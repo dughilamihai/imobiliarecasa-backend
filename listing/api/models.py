@@ -381,7 +381,13 @@ class Listing(models.Model):
         help_text="Prețul trebuie să fie un număr întreg și pozitiv."
     )
     currency = models.SmallIntegerField(choices=CURRENCY_CHOICES, default=0)
-    status = models.SmallIntegerField(choices=STATUS_CHOICES, default=0, db_index=True)
+    negociabil = models.BooleanField(default=False)    
+    suprafata_utila = models.FloatField(
+        "Suprafață utilă",
+        null=True,
+        blank=True
+    )       
+    status = models.SmallIntegerField(choices=STATUS_CHOICES, default=0, db_index=True) 
     
     # Relații
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_listings')
@@ -461,12 +467,7 @@ class Listing(models.Model):
         blank=True,
         db_index=True,        
         help_text="Zonarea poate fi intravilan, extravilan sau necompletată."
-    ) 
-    suprafata_utila = models.FloatField(
-        "Suprafață utilă",
-        null=True,
-        blank=True
-    )    
+    )  
     
     # SEO
     slug = models.SlugField(max_length=160, unique=True, blank=True)
