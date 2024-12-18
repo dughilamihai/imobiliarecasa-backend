@@ -19,6 +19,9 @@ from datetime import timedelta
 # generating meta tags for listings
 from datetime import datetime
 
+# for custom variables
+from django.conf import settings
+
 logger = logging.getLogger(__name__)
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -341,6 +344,7 @@ class ListingSerializer(serializers.ModelSerializer):
             'description',
             'price',
             'currency',
+            'negociabil',            
             'status',
             'photo1',
             'photo2',
@@ -593,6 +597,7 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             'description',
             'price',
             'currency',
+            'negociabil',
             'status',
             'photo1',
             'photo2',
@@ -818,5 +823,36 @@ class ReportSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"reason": "Motivul raportului este obligatoriu."})
 
         return data
+
+class SuggestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Suggestion
+        fields = ['listing', 'text']
+
+    def validate_listing(self, value):
+        """
+        Verificăm dacă anunțul (listing) aparține utilizatorului.
+        """
+        request = self.context['request']
+        user = request.user
+        print(user)
+
+        if value.user != user: 
+            raise serializers.ValidationError("Nu poți adăuga sugestii la un anunț care nu îți aparține.")
+        
+        return value
+    
+    def validate(self, attrs):
+        """
+        Verificăm dacă utilizatorul a trimis deja un număr limitat de sugestii în general.
+        """
+        user = self.context['request'].user
+
+        # Verificăm câte sugestii a trimis utilizatorul
+        if Suggestion.objects.filter(user=user).count() >= settings.SUGGESTION_LIMIT:
+            raise serializers.ValidationError(f"Nu poți trimite mai mult de {settings.SUGGESTION_LIMIT} sugestii în general.")
+
+        return attrs    
+
 
 

@@ -190,6 +190,8 @@ if DEBUG:
     PAGE_SIZE = 8
 else:
     PAGE_SIZE = 32
+    
+SUGGESTION_LIMIT = 3    
 
 LOGGING = {
     'version': 1,

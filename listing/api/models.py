@@ -381,7 +381,13 @@ class Listing(models.Model):
         help_text="Prețul trebuie să fie un număr întreg și pozitiv."
     )
     currency = models.SmallIntegerField(choices=CURRENCY_CHOICES, default=0)
-    status = models.SmallIntegerField(choices=STATUS_CHOICES, default=0, db_index=True)
+    negociabil = models.BooleanField(default=False)    
+    suprafata_utila = models.FloatField(
+        "Suprafață utilă",
+        null=True,
+        blank=True
+    )       
+    status = models.SmallIntegerField(choices=STATUS_CHOICES, default=0, db_index=True) 
     
     # Relații
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_listings')
@@ -461,12 +467,7 @@ class Listing(models.Model):
         blank=True,
         db_index=True,        
         help_text="Zonarea poate fi intravilan, extravilan sau necompletată."
-    ) 
-    suprafata_utila = models.FloatField(
-        "Suprafață utilă",
-        null=True,
-        blank=True
-    )    
+    )  
     
     # SEO
     slug = models.SlugField(max_length=160, unique=True, blank=True)
@@ -509,11 +510,28 @@ class Report(models.Model):
     listing = models.ForeignKey('Listing', on_delete=models.CASCADE, related_name='reports')
     reporter_name = models.CharField(max_length=255)
     reporter_email = models.EmailField()
-    reason = models.TextField()
+    reason = BleachField()
     ip_address = models.GenericIPAddressField(null=True, blank=True)  # Adaugă câmp pentru IP
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)  # Câmp pentru status
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Report for {self.listing.title} by {self.reporter_name}"        
+        return f"Report for {self.listing.title} by {self.reporter_name}"    
+    
+class Suggestion(models.Model):
+    listing = models.ForeignKey(
+        Listing, 
+        on_delete=models.CASCADE, 
+        related_name='suggestions', 
+        null=True,  # Permite valoarea NULL în baza de date
+        blank=True  # Permite câmpul să fie lăsat gol în formulare
+    )
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    text = BleachField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        listing_title = self.listing.title if self.listing else 'No Listing'
+        user_name = self.user.username if self.user else 'Admin'
+        return f"Suggestion for {listing_title} by {user_name}"   
     

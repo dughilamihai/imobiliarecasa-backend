@@ -167,5 +167,16 @@ class ReportAdmin(admin.ModelAdmin):
         return obj.listing.id  # Afișează UUID-ul asociat raportului
 
     listing_id.short_description = 'Listing UUID'  # Etichetă pentru UUID
+    
+@admin.register(Suggestion)
+class SuggestionAdmin(admin.ModelAdmin):
+    list_display = ('listing', 'user', 'text', 'created_at')
+    list_filter = ('created_at', 'user')
+
+    def save_model(self, request, obj, form, change):
+        if not obj.user:
+            obj.user = request.user  # Setează utilizatorul curent, dacă nu este setat
+        super().save_model(request, obj, form, change)
+    
 
 

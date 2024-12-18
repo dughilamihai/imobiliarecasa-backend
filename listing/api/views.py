@@ -495,6 +495,16 @@ class ReportCreateAPIView(APIView):
             return Response({"detail": "Raportul a fost trimis cu succes."}, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class SuggestionCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]  # Doar utilizatori autentificați pot adăuga sugestii
+
+    def post(self, request, *args, **kwargs):
+        serializer = SuggestionSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save(user=request.user)  # Adăugăm user-ul curent
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)    
 
 
 
