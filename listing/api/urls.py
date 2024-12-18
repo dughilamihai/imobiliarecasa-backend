@@ -24,4 +24,5 @@ urlpatterns = [
     path('listings/<uuid:uuid>/delete/', ListingDeleteAPIView.as_view(), name='listing-delete'),  # Pentru DELETE
     path('listings/<uuid:uuid>/update/', ListingUpdateAPIView.as_view(), name='listing-update'), # Pentru UPDATE  
     path('reports/<uuid:uuid>/', ReportCreateAPIView.as_view(), name='report-create'), # Ruta pentru a crea un raport
+    path('suggestions/', SuggestionCreateAPIView.as_view(), name='create-suggestion'),    
 ]
