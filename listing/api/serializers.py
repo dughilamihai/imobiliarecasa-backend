@@ -378,6 +378,7 @@ class ListingSerializer(serializers.ModelSerializer):
             'compartimentare', 
             'zonare',
             'suprafata_utila',
+            'numar_camere',
         ]    
 
     def validate(self, data):
@@ -386,7 +387,8 @@ class ListingSerializer(serializers.ModelSerializer):
         city_id = data.get('city_id')
         neighborhood_id = data.get('neighborhood_id')  
         compartimentare = data.get('compartimentare')
-        zonare = data.get('zonare')          
+        zonare = data.get('zonare')    
+        numar_camere = data.get('numar_camere')                
         
         # Obține categoria
         category = Category.objects.get(id=data['category_id']) 
@@ -446,8 +448,14 @@ class ListingSerializer(serializers.ModelSerializer):
         # Verificăm regula pentru "zonare"
         if zonare is not None and category.group != 3:
             raise serializers.ValidationError({
-                'compartimentare': 'Câmpul "Zonare terenuri" nu este permis pentru această categorie.'
-            })    
+                'zonare': 'Câmpul "Zonare terenuri" nu este permis pentru această categorie.'
+            })
+            
+        # Verificăm regula pentru "numar_camere"
+        if numar_camere is not None and category.group not in [0, 1, 2]:
+            raise serializers.ValidationError({
+                'numar_camere': 'Câmpul "Număr camere" nu este permis pentru această categorie.'
+            })                 
 
         # Returnează datele cu slug-ul validat
         data['slug'] = slug_base
@@ -499,7 +507,16 @@ class ListingSerializer(serializers.ModelSerializer):
         # Adaugă alte validări dacă este cazul
         if value is not None and value > 10000000:  # Limita maximă teoretică (10 milioane de m²)
             raise serializers.ValidationError("Suprafața utilă este prea mare.")
-        
+        return value    
+    
+    def validate_latitude(self, value):
+        if value < -90 or value > 90:
+            raise serializers.ValidationError("Latitudinea trebuie să fie între -90 și 90.")
+        return value
+
+    def validate_longitude(self, value):
+        if value < -180 or value > 180:
+            raise serializers.ValidationError("Longitudinea trebuie să fie între -180 și 180.")
         return value    
     
     def create(self, validated_data):
@@ -547,7 +564,13 @@ class ListingSerializer(serializers.ModelSerializer):
             zonare_text = instance.get_zonare_display()
             features.append(zonare_text.capitalize())
             features_added = True
-
+            
+        # Adăugare număr camere, dacă există
+        if instance.numar_camere is not None:
+            numar_camere_text = instance.get_numar_camere_display()
+            features.append(numar_camere_text)
+            features_added = True
+            
         # Adăugare tag_list dacă există tag-uri
         if tag_list:
             features.append(tag_list)
@@ -627,7 +650,8 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             'meta_description',    
             'compartimentare',
             'zonare', 
-            'suprafata_utila',                              
+            'suprafata_utila',   
+            'numar_camere',                                       
         ]
 
     # Validări individuale
@@ -650,7 +674,8 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         category_id = data.get('category_id')
         compartimentare = data.get('compartimentare')
-        zonare = data.get('zonare')        
+        zonare = data.get('zonare')       
+        numar_camere = data.get('numar_camere')          
     
         if 'county_id' in data:
             county = County.objects.filter(id=data['county_id']).first()
@@ -686,8 +711,15 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             # Verificăm regula pentru "zonare"
             if zonare is not None and category.group != 3:
                 raise serializers.ValidationError({
-                    'compartimentare': 'Câmpul "Zonare terenuri" nu este permis pentru această categorie.'
-                })                          
+                    'zonare': 'Câmpul "Zonare terenuri" nu este permis pentru această categorie.'
+                })   
+                
+            # Verificăm regula pentru "numar_camere"
+            if numar_camere is not None and category.group not in [0, 1, 2]:
+                print("Here")
+                raise serializers.ValidationError({
+                    'numar_camere': 'Câmpul "Număr camere" nu este permis pentru această categorie.'
+                })                                       
 
         return data
     
@@ -699,8 +731,17 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
         # Adaugă alte validări dacă este cazul
         if value is not None and value > 10000000:  # Limita maximă teoretică (10 milioane de m²)
             raise serializers.ValidationError("Suprafața utilă este prea mare.")
-        
-        return value    
+        return value  
+    
+    def validate_latitude(self, value):
+        if value < -90 or value > 90:
+            raise serializers.ValidationError("Latitudinea trebuie să fie între -90 și 90.")
+        return value
+
+    def validate_longitude(self, value):
+        if value < -180 or value > 180:
+            raise serializers.ValidationError("Longitudinea trebuie să fie între -180 și 180.")
+        return value          
     
     def update(self, instance, validated_data):
         title = validated_data.get('title', instance.title)
@@ -765,6 +806,12 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             zonare_text = instance.get_zonare_display()
             features.append(zonare_text.capitalize())
             features_added = True
+            
+        # Adăugare număr camere, dacă există
+        if instance.numar_camere is not None:
+            numar_camere_text = instance.get_numar_camere_display()
+            features.append(numar_camere_text)
+            features_added = True            
 
         # Adăugare tag_list dacă există tag-uri
         if tag_list:

@@ -371,7 +371,14 @@ class Listing(models.Model):
     ZONARE_CHOICES = [
         (0, 'intravilan'),
         (1, 'extravilan'),
-    ]    
+    ] 
+    NUMAR_CAMERE_CHOICES = [
+        (1, '1 Cameră'),
+        (2, '2 Camere'),
+        (3, '3 Camere'),
+        (4, '4 Camere'),
+        (5, '5+ Camere'),
+    ]       
     
     # Câmpuri de bază
     id = models.UUIDField(primary_key=True, db_index=True, unique=True, default=uuid4, editable=False)       
@@ -468,6 +475,14 @@ class Listing(models.Model):
         db_index=True,        
         help_text="Zonarea poate fi intravilan, extravilan sau necompletată."
     )  
+    numar_camere = models.IntegerField(
+        choices=NUMAR_CAMERE_CHOICES, 
+        default=1,
+        null=True, 
+        blank=True,
+        db_index=True,  
+        help_text="Se aplica doar pentru apartamente, case, vile, spatii comerciale."                
+        )    
     
     # SEO
     slug = models.SlugField(max_length=160, unique=True, blank=True)
