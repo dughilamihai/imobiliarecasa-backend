@@ -22,6 +22,10 @@ from  django_filters.rest_framework import DjangoFilterBackend
 # for pagination
 from rest_framework.pagination import PageNumberPagination
 
+# for caching
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+
 # for listing
 # every user will be able to see all the listings, but only logged-in users will be able to add, change, or delete objects.
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
@@ -31,6 +35,10 @@ from .models import *
 from .serializers import *
 
 logger = logging.getLogger(__name__)
+
+# Extrage valoarea TIMEOUT din configurația de cache
+CACHE_TIMEOUT = settings.CACHES['default']['TIMEOUT']
+
 
 class APIRootView(APIView):
     """
@@ -380,9 +388,11 @@ class ListingAPIView(APIView):
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  
-    
+           
 class HomeListingAPIView(APIView):
     permission_classes = [AllowAny]    
+    
+    @method_decorator(cache_page(CACHE_TIMEOUT))
     def get(self, request):
         # Obține cele 8 cele mai noi anunțuri
         latest_listings = Listing.objects.filter(

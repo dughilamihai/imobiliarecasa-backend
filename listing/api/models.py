@@ -535,3 +535,9 @@ class Suggestion(models.Model):
         user_name = self.user.username if self.user else 'Admin'
         return f"Suggestion for {listing_title} by {user_name}"   
     
+class ManagementCommand(models.Model):
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name       
+    
