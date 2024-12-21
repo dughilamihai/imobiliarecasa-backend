@@ -2,6 +2,13 @@
 from django.contrib import admin
 from .models import *
 
+# for running commands
+from django.core.management import call_command
+from django.urls import path
+from django.utils.html import format_html
+from django.urls import reverse
+from django.http import HttpResponseRedirect
+
 @admin.register(County)
 class CountyAdmin(admin.ModelAdmin):
     list_display = ('name', 'date_created')
@@ -177,6 +184,32 @@ class SuggestionAdmin(admin.ModelAdmin):
         if not obj.user:
             obj.user = request.user  # Setează utilizatorul curent, dacă nu este setat
         super().save_model(request, obj, form, change)
+        
+class ManagementCommandAdmin(admin.ModelAdmin):
+    list_display = ['name', 'run_command']
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('clear-cache/', self.admin_site.admin_view(self.clear_cache), name='clear-cache'),
+        ]
+        return custom_urls + urls
+
+    def run_command(self, obj):
+        if obj.name == 'clear_cache':
+            return format_html('<a class="button" href="{}">Clear Cache</a>', reverse('admin:clear-cache'))
+        else:
+            return "No command linked"
+
+    def clear_cache(self, request):
+        call_command('clear_cache')
+        self.message_user(request, "Cache cleared successfully.")
+        return HttpResponseRedirect(reverse('admin:api_managementcommand_changelist'))
+
+    run_command.short_description = 'Actions'
+    run_command.allow_tags = True
+
+admin.site.register(ManagementCommand, ManagementCommandAdmin)        
     
 
 

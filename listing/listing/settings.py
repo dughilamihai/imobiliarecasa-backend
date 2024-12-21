@@ -177,6 +177,14 @@ SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": True,                     # Se va actualiza câmpul `last_login` la fiecare utilizare a unui refresh token.
 }
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': BASE_DIR / 'cache',  # Using BASE_DIR to set the cache directory,
+        'TIMEOUT': 8 * 60 * 60,  # Timpul de expirare pentru cache (în secunde), 28800 seconds (8 hours) 
+    }
+}
+
 # for bleach allowed tags
 # Which HTML tags are allowed
 BLEACH_ALLOWED_TAGS = ['p', 'br']
