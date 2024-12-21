@@ -381,6 +381,39 @@ class ListingAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  
     
+class HomeListingAPIView(APIView):
+    permission_classes = [AllowAny]    
+    def get(self, request):
+        # Obține cele 8 cele mai noi anunțuri
+        latest_listings = Listing.objects.filter(
+            status=1,
+            valability_end_date__gte=now().date()
+        ).order_by('-created_date')[:8]
+
+        # Obține cele 8 cele mai apreciate anunțuri
+        most_liked_listings = Listing.objects.filter(
+            status=1,
+            valability_end_date__gte=now().date()
+        ).order_by('-like_count')[:8]
+
+        # Obține 8 anunțuri random
+        random_listings = Listing.objects.filter(
+            status=1,
+            valability_end_date__gte=now().date()
+        ).order_by('?')[:8]
+
+        # Serializăm datele
+        latest_serializer = ListingSerializer(latest_listings, many=True)
+        liked_serializer = ListingSerializer(most_liked_listings, many=True)
+        random_serializer = ListingSerializer(random_listings, many=True)
+
+        # Returnăm datele într-un răspuns structurat
+        return Response({
+            'latest': latest_serializer.data,      # Datele pentru cele mai noi anunțuri
+            'most_liked': liked_serializer.data,   # Datele pentru cele mai apreciate anunțuri
+            'random': random_serializer.data,      # Datele pentru anunțuri random
+        }, status=status.HTTP_200_OK)
+    
 # Clasă pentru vizualizare
 class ListingDetailAPIView(APIView):
     permission_classes = [AllowAny]  # Or IsAuthenticatedOrReadOnly    
