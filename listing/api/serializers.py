@@ -22,6 +22,9 @@ from datetime import datetime
 # for custom variables
 from django.conf import settings
 
+# for hashing
+from .utils import generate_hash
+
 logger = logging.getLogger(__name__)
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -455,7 +458,22 @@ class ListingSerializer(serializers.ModelSerializer):
         if numar_camere is not None and category.group not in [0, 1, 2]:
             raise serializers.ValidationError({
                 'numar_camere': 'Câmpul "Număr camere" nu este permis pentru această categorie.'
-            })                 
+            })      
+            
+        # Verificare imagini duplicate
+        for i in range(1, 10):  # Iterează prin câmpurile foto
+            photo_field = data.get(f"photo{i}")
+            if photo_field:
+                # Generează hash-ul imaginii
+                hash_value = generate_hash(photo_field)
+                hash_field = f"photo{i}_hash"
+
+                # Verifică dacă există un alt obiect cu același hash
+                filters = {hash_field: hash_value}
+                if Listing.objects.filter(**filters).exclude(id=self.instance.id if self.instance else None).exists():
+                    raise serializers.ValidationError({
+                        f"photo{i}": f"Imaginea {i} există deja în sistem."
+                    })                       
 
         # Returnează datele cu slug-ul validat
         data['slug'] = slug_base
@@ -670,7 +688,6 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Categoria selectată nu există.")
         return value
 
-    # Validări complexe (relații între câmpuri)
     def validate(self, data):
         category_id = data.get('category_id')
         compartimentare = data.get('compartimentare')
@@ -719,7 +736,22 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
                 print("Here")
                 raise serializers.ValidationError({
                     'numar_camere': 'Câmpul "Număr camere" nu este permis pentru această categorie.'
-                })                                       
+                })  
+                
+        # Verificare imagini duplicate
+        for i in range(1, 10):  # Iterează prin câmpurile foto
+            photo_field = data.get(f"photo{i}")
+            if photo_field:
+                # Generează hash-ul imaginii
+                hash_value = generate_hash(photo_field)
+                hash_field = f"photo{i}_hash"
+
+                # Verifică dacă există un alt obiect cu același hash
+                filters = {hash_field: hash_value}
+                if Listing.objects.filter(**filters).exclude(id=self.instance.id if self.instance else None).exists():
+                    raise serializers.ValidationError({
+                        f"photo{i}": f"Imaginea {i} există deja în sistem."
+                    })                                                       
 
         return data
     

@@ -430,14 +430,23 @@ class Listing(models.Model):
 
     # Imagini
     photo1 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings')
+    photo1_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)    
     photo2 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
+    photo2_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)  
     photo3 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
+    photo3_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)      
     photo4 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
+    photo4_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)    
     photo5 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
+    photo5_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)    
     photo6 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
+    photo6_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)    
     photo7 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
-    photo8 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True) 
-    photo9 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)       
+    photo7_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)    
+    photo8 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
+    photo8_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)     
+    photo9 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)    
+    photo9_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)       
 
     # Link pentru videoclip
     video_url = models.URLField(max_length=500, blank=True, null=True)
