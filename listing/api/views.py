@@ -354,10 +354,12 @@ class ListingFilter(filters.FilterSet):
     price_max = filters.NumberFilter(field_name="price", lookup_expr="lte")
     category = filters.CharFilter(field_name="category", lookup_expr="exact")
     city_id = filters.NumberFilter(field_name="city__id", lookup_expr="exact")
+    year_of_construction_min = filters.NumberFilter(field_name='year_of_construction', lookup_expr='gte', label='An minim Construcție')
+    year_of_construction_max = filters.NumberFilter(field_name='year_of_construction', lookup_expr='lte', label='An maxim Construcție')    
 
     class Meta:
         model = Listing
-        fields = ['category', 'price_min', 'price_max', 'city__id']
+        fields = ['category', 'price_min', 'price_max', 'city__id', 'year_of_construction_min', 'year_of_construction_max']
         
 class ListingAPIView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]

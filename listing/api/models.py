@@ -387,7 +387,7 @@ class Listing(models.Model):
     price = models.PositiveIntegerField(
         help_text="Prețul trebuie să fie un număr întreg și pozitiv."
     )
-    currency = models.SmallIntegerField(choices=CURRENCY_CHOICES, default=0)
+    currency = models.SmallIntegerField(choices=CURRENCY_CHOICES, default=1)
     negociabil = models.BooleanField(default=False)    
     suprafata_utila = models.FloatField(
         "Suprafață utilă",
@@ -471,6 +471,7 @@ class Listing(models.Model):
     is_manual_label = models.BooleanField(default=False)  # Etichetare manuală    
     
     # Campuri aditionale
+    year_of_construction = models.IntegerField(null=True, blank=True, help_text="Year of construction")    
     compartimentare = models.SmallIntegerField(
         choices=COMPARTIMENTARE_CHOICES,
         null=True,
