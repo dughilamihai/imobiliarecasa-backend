@@ -346,7 +346,6 @@ class ListingSerializer(serializers.ModelSerializer):
             'title',
             'description',
             'price',
-            'currency',
             'negociabil',            
             'status',
             'photo1',
@@ -382,6 +381,7 @@ class ListingSerializer(serializers.ModelSerializer):
             'zonare',
             'suprafata_utila',
             'numar_camere',
+            'year_of_construction',
         ]    
 
     def validate(self, data):
@@ -391,7 +391,8 @@ class ListingSerializer(serializers.ModelSerializer):
         neighborhood_id = data.get('neighborhood_id')  
         compartimentare = data.get('compartimentare')
         zonare = data.get('zonare')    
-        numar_camere = data.get('numar_camere')                
+        numar_camere = data.get('numar_camere')   
+        year_of_construction = data.get('year_of_construction')                     
         
         # Obține categoria
         category = Category.objects.get(id=data['category_id']) 
@@ -458,7 +459,13 @@ class ListingSerializer(serializers.ModelSerializer):
         if numar_camere is not None and category.group not in [0, 1, 2]:
             raise serializers.ValidationError({
                 'numar_camere': 'Câmpul "Număr camere" nu este permis pentru această categorie.'
-            })      
+            })    
+
+        # Verificăm regula pentru "year_of_construction"
+        if year_of_construction is not None and category.group == 3:
+            raise serializers.ValidationError({
+                'year_of_construction': 'Câmpul "An construcție" nu este permis pentru această categorie.'
+            })              
             
         # Verificare imagini duplicate
         for i in range(1, 10):  # Iterează prin câmpurile foto
@@ -535,6 +542,19 @@ class ListingSerializer(serializers.ModelSerializer):
     def validate_longitude(self, value):
         if value < -180 or value > 180:
             raise serializers.ValidationError("Longitudinea trebuie să fie între -180 și 180.")
+        return value    
+    
+    def validate_year_of_construction(self, value):
+        anul_curent = datetime.now().year
+
+        # Verificare pentru exact 4 cifre
+        if not (1000 <= value <= 9999):
+            raise serializers.ValidationError("Anul construcției trebuie să aibă exact 4 cifre.")
+        
+        # Verificare pentru a nu depăși anul curent
+        if value > anul_curent:
+            raise serializers.ValidationError(f"Anul construcției nu poate fi mai mare decât anul curent ({anul_curent}).")
+        
         return value    
     
     def create(self, validated_data):
@@ -637,7 +657,6 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             'title',
             'description',
             'price',
-            'currency',
             'negociabil',
             'status',
             'photo1',
@@ -669,7 +688,8 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             'compartimentare',
             'zonare', 
             'suprafata_utila',   
-            'numar_camere',                                       
+            'numar_camere',          
+            'year_of_construction',                                           
         ]
 
     # Validări individuale
@@ -692,7 +712,8 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
         category_id = data.get('category_id')
         compartimentare = data.get('compartimentare')
         zonare = data.get('zonare')       
-        numar_camere = data.get('numar_camere')          
+        numar_camere = data.get('numar_camere')   
+        year_of_construction = data.get('year_of_construction')       
     
         if 'county_id' in data:
             county = County.objects.filter(id=data['county_id']).first()
@@ -733,10 +754,15 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
                 
             # Verificăm regula pentru "numar_camere"
             if numar_camere is not None and category.group not in [0, 1, 2]:
-                print("Here")
                 raise serializers.ValidationError({
                     'numar_camere': 'Câmpul "Număr camere" nu este permis pentru această categorie.'
                 })  
+                
+            # Verificăm regula pentru "year_of_construction"
+            if year_of_construction is not None and category.group == 3:
+                raise serializers.ValidationError({
+                    'year_of_construction': 'Câmpul "An construcție" nu este permis pentru această categorie.'
+                })                
                 
         # Verificare imagini duplicate
         for i in range(1, 10):  # Iterează prin câmpurile foto
@@ -773,7 +799,20 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
     def validate_longitude(self, value):
         if value < -180 or value > 180:
             raise serializers.ValidationError("Longitudinea trebuie să fie între -180 și 180.")
-        return value          
+        return value         
+    
+    def validate_year_of_construction(self, value):
+        anul_curent = datetime.now().year
+
+        # Verificare pentru exact 4 cifre
+        if not (1000 <= value <= 9999):
+            raise serializers.ValidationError("Anul construcției trebuie să aibă exact 4 cifre.")
+        
+        # Verificare pentru a nu depăși anul curent
+        if value > anul_curent:
+            raise serializers.ValidationError(f"Anul construcției nu poate fi mai mare decât anul curent ({anul_curent}).")
+        
+        return value         
     
     def update(self, instance, validated_data):
         title = validated_data.get('title', instance.title)
@@ -914,7 +953,6 @@ class SuggestionSerializer(serializers.ModelSerializer):
         """
         request = self.context['request']
         user = request.user
-        print(user)
 
         if value.user != user: 
             raise serializers.ValidationError("Nu poți adăuga sugestii la un anunț care nu îți aparține.")
