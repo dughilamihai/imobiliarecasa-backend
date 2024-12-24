@@ -54,7 +54,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'email', 'username', 'password', 'confirm_password',
-            'first_name', 'last_name', 'hashed_ip_address', 'created_at', 'full_name', 'has_accepted_tos', 'is_active', 'account_type'
+            'first_name', 'last_name', 'hashed_ip_address', 'created_at', 'full_name', 'has_accepted_tos', 'is_active', 'account_type', 'profile_picture', 'company_logo'
         ]
         extra_kwargs = {
             'password': {'write_only': True, 'validators': [validate_password]},
@@ -63,19 +63,51 @@ class UserSerializer(serializers.ModelSerializer):
             'email': {'required': True},  # Email este obligatoriu
             'username': {'required': True},  # Username este obligatoriu
             'has_accepted_tos': {'required': True}            
-        }
+        }       
         
     def validate(self, attrs):
         password = attrs.get('password')
         confirm_password = attrs.get('confirm_password')
+        account_type = attrs.get('account_type')  
+        profile_picture = attrs.get('profile_picture')
+        company_logo = attrs.get('company_logo')      
 
         if password != confirm_password:
             raise serializers.ValidationError("Parolele nu se potrivesc.")
         
-        # Dacă parolele se potrivesc, elimină confirm_password din attrs, pentru că nu trebuie salvat în bază de date
+        # Elimină `confirm_password` din `attrs`, deoarece nu trebuie salvat în baza de date
         attrs.pop('confirm_password')
+        
+        # Verificări pentru tipul de cont și imaginile permise
+        if account_type in ['person', 'agent'] and 'company_logo' in attrs:
+            raise serializers.ValidationError("Logo-ul nu este permis pentru acest tip de utilizator.")
+        if account_type == 'company' and 'profile_picture' in attrs:
+            raise serializers.ValidationError("Imaginea de profil nu este permisă pentru companie.")  
+        
+        # Verificare și generare hash pentru profile_picture
+        if profile_picture:
+            hash_value = generate_hash(profile_picture)
+            # Verificare dacă există un alt utilizator cu același hash
+            if User.objects.filter(profile_picture_hash=hash_value).exclude(id=self.instance.id if self.instance else None).exists():
+                raise serializers.ValidationError({"profile_picture": "Această imagine de profil există deja în sistem."})
+            # Adăugare hash la attrs
+            attrs['profile_picture_hash'] = hash_value
 
-        return attrs        
+        # Verificare și generare hash pentru company_logo
+        if company_logo:
+            hash_value = generate_hash(company_logo)
+            # Verificare dacă există un alt utilizator cu același hash
+            if User.objects.filter(company_logo_hash=hash_value).exclude(id=self.instance.id if self.instance else None).exists():
+                raise serializers.ValidationError({"company_logo": "Acest logo există deja în sistem."})
+            # Adăugare hash la attrs
+            attrs['company_logo_hash'] = hash_value    
+            
+        # Verificăm dacă utilizatorul a acceptat TOS
+        has_accepted_tos = attrs.get('has_accepted_tos')
+        if not has_accepted_tos:
+            raise serializers.ValidationError({"has_accepted_tos": "Trebuie să accepți Termenii și Condițiile pentru a te înregistra."})                      
+
+        return attrs      
 
     def get_full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}".strip()
@@ -124,6 +156,7 @@ class UserSerializer(serializers.ModelSerializer):
 
         # Extrage parola și creează utilizatorul
         password = validated_data.pop('password')
+        
         user = User.objects.create_user(password=password, **validated_data)
 
         # Creează abonamentul pentru utilizatorul nou creat
@@ -153,7 +186,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'username', 'first_name', 'last_name', 'full_name', 'has_accepted_tos', 'user_type', 'account_type_display']
+        fields = ['id', 'email', 'username', 'first_name', 'last_name', 'full_name', 'has_accepted_tos', 'user_type', 'account_type_display', 'profile_picture', 'company_logo']
 
     def get_full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}".strip()   
@@ -180,7 +213,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         # Verifică dacă email-ul este confirmat
         if not user.email_verified:
-            logger.warning(f"User {user.email} attempted to log in without verifying email.")
             raise AuthenticationFailed({
                 'detail': 'Contul nu este activ! Nu ați confirmat link-ul primit pe email.',
                 'code': 'email_not_verified'
@@ -219,7 +251,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     account_type_display = serializers.CharField(source='get_account_type_display', read_only=True)    
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'account_type_display']
+        fields = ['email', 'first_name', 'last_name', 'account_type_display', 'profile_picture', 'company_logo' ]
 
     def validate_first_name(self, value):
         """
@@ -242,14 +274,43 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         return value 
     
     def validate(self, attrs):
-            """
-            Validează dacă `account_type` este trimis și aruncă eroare.
-            """
-            if 'account_type' in self.initial_data:
-                raise serializers.ValidationError(
-                    {"account_type": "Tipul contului nu poate fi modificat după crearea utilizatorului."}
-                )
-            return attrs    
+        # Obține tipul de cont și imaginile
+        account_type = attrs.get('account_type', self.instance.account_type if self.instance else None)
+        profile_picture = attrs.get('profile_picture', self.instance.profile_picture if self.instance else None)
+        company_logo = attrs.get('company_logo', self.instance.company_logo if self.instance else None)
+          
+        """
+        Validează dacă `account_type` este trimis și aruncă eroare.
+        """
+        if 'account_type' in self.initial_data:
+            raise serializers.ValidationError(
+                {"account_type": "Tipul contului nu poate fi modificat după crearea utilizatorului."}
+            )
+
+        # Validare pentru tipul de cont și imagini
+        if account_type in ['person', 'agent'] and company_logo:
+            raise serializers.ValidationError(
+                {"company_logo": "Logo-ul nu este permis pentru acest tip de utilizator."}
+            )
+        if account_type == 'company' and profile_picture:
+            raise serializers.ValidationError(
+                {"profile_picture": "Imaginea de profil nu este permisă pentru companii."}
+            )
+
+        # Validare pentru unicitate folosind hash-uri
+        if profile_picture:
+            hash_value = generate_hash(profile_picture)
+            if User.objects.filter(profile_picture_hash=hash_value).exclude(id=self.instance.id if self.instance else None).exists():
+                raise serializers.ValidationError({"profile_picture": "Această imagine de profil există deja în sistem."})
+            attrs['profile_picture_hash'] = hash_value
+
+        if company_logo:
+            hash_value = generate_hash(company_logo)
+            if User.objects.filter(company_logo_hash=hash_value).exclude(id=self.instance.id if self.instance else None).exists():
+                raise serializers.ValidationError({"company_logo": "Acest logo există deja în sistem."})
+            attrs['company_logo_hash'] = hash_value 
+                            
+        return attrs    
 
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:

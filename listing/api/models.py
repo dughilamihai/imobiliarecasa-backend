@@ -25,7 +25,6 @@ from django_bleach.models import BleachField
 
 # for validation
 from django.core.validators import RegexValidator
-
 class County(models.Model):
     # Câmpuri de bază
     name = models.CharField(max_length=100, unique=True)
@@ -149,8 +148,9 @@ class Category(MPTTModel):
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
-            raise ValueError(_('Nu ati completat adresa de email'))
+            raise ValueError("Nu ati completat adresa de email")
         email = self.normalize_email(email)
+        extra_fields['is_active'] = True  # Setăm explicit is_active
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -182,8 +182,12 @@ class User(AbstractUser):
         ('agent', 'Agent Imobiliar'),
     ] 
     email = models.EmailField(unique=True)    
-    id = models.UUIDField(primary_key=True, db_index=True, unique=True, default=uuid4, editable=False)
+    id = models.UUIDField(primary_key=True, db_index=True, unique=True, default=uuid4, editable=False) 
     account_type = models.CharField(max_length=10, choices=ACCOUNT_TYPE_CHOICES, default='person')    
+    profile_picture = ResizedImageField(size=[200, 200], force_format="WEBP", quality=80, upload_to='profile_pictures', null=True, blank=True)
+    profile_picture_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)
+    company_logo = ResizedImageField(size=[240, 60], force_format="WEBP", quality=80, upload_to='company_logos', null=True, blank=True)
+    company_logo_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)    
     company = models.ForeignKey(
         'CompanyProfile',
         on_delete=models.SET_NULL,
@@ -204,6 +208,8 @@ class User(AbstractUser):
     tos_accepted_timestamp = models.DateTimeField(null=True, blank=True)
     tos_accepted_ip = models.GenericIPAddressField(null=True, blank=True)   
     created_at = models.DateTimeField(auto_now_add=True)         
+    
+    objects = UserManager()
     
     def verify_email(self):
         self.email_verified = True
@@ -235,7 +241,7 @@ class User(AbstractUser):
         if company is None:
             raise ValidationError("Compania specificată nu este validă.")
         self.company = company  # Asociază agentul cu compania
-        self.save()  # Salvează modificările        
+        self.save()  # Salvează modificările            
 
     def save(self, *args, **kwargs):
         # 1. Validare companie
@@ -264,7 +270,8 @@ class User(AbstractUser):
         elif user:
             # Handle unverified email
             raise ValidationError("Adresa de email nu a fost validata")
-        return None     
+        return None
+
 
 class UserSubscription(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="subscription")
