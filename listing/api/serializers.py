@@ -259,7 +259,7 @@ class AddressSerializer(serializers.ModelSerializer):
 class CompanyProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CompanyProfile
-        fields = ['registration_number', 'company_name', 'website', 'linkedin_url', 'facebook_url']
+        fields = ['registration_number', 'company_name', 'website', 'linkedin_url', 'facebook_url', 'company_type']
 
     def validate_company_name(self, value):
         if not value or value.strip() == "":
@@ -970,6 +970,48 @@ class SuggestionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(f"Nu poți trimite mai mult de {settings.SUGGESTION_LIMIT} sugestii în general.")
 
         return attrs    
+    
+class ClaimRequestSerializer(serializers.ModelSerializer):
+    registration_number = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = ClaimRequest
+        fields = ['registration_number']
+
+    def validate(self, attrs):
+        user = self.context['request'].user
+        registration_number = attrs.pop('registration_number')
+
+        # Găsește compania pe baza numărului de înregistrare
+        try:
+            company = CompanyProfile.objects.get(registration_number=registration_number)
+        except CompanyProfile.DoesNotExist:
+            raise serializers.ValidationError("Nu există nicio companie cu acest număr de înregistrare.")
+
+        # Verifică dacă utilizatorul este de tip 'agent'
+        if user.account_type != 'agent':
+            raise serializers.ValidationError("Doar agenții imobiliari pot revendica o companie.")
+
+        # Verifică dacă există deja o cerere aprobată sau respinsă pentru această companie
+        existing_request = ClaimRequest.objects.filter(user=user, company=company).exclude(status='pending').first()
+        if existing_request:
+            raise serializers.ValidationError(
+                f"Nu poți face o nouă cerere pentru această companie. Statusul ultimei cereri: {existing_request.get_status_display()}."
+            )
+
+        # Verifică dacă există deja o cerere în așteptare pentru această companie
+        if ClaimRequest.objects.filter(user=user, company=company, status='pending').exists():
+            raise serializers.ValidationError("Există deja o cerere în așteptare pentru această companie.")
+
+        attrs['company'] = company
+        return attrs
+
+    def create(self, validated_data):
+        """Creează cererea de revendicare."""
+        user = self.context['request'].user
+        company = validated_data['company']
+        return ClaimRequest.objects.create(user=user, company=company)
+ 
 
 
 

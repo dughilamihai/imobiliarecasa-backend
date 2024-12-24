@@ -549,8 +549,77 @@ class SuggestionCreateAPIView(APIView):
         if serializer.is_valid():
             serializer.save(user=request.user)  # Adăugăm user-ul curent
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)    
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)   
+    
+class ClaimCompanyView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def post(self, request, *args, **kwargs):
+        serializer = ClaimRequestSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            claim_request = serializer.save()
+            return Response(
+                {"detail": "Cererea de revendicare a fost trimisă."},
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ApproveClaimRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk, *args, **kwargs):
+        try:
+            claim_request = ClaimRequest.objects.get(pk=pk, status='pending')
+        except ClaimRequest.DoesNotExist:
+            return Response(
+                {"detail": "Cererea nu există sau nu este în așteptare."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Verifică dacă utilizatorul autentificat este proprietarul companiei
+        if claim_request.company.user != request.user:
+            return Response(
+                {"detail": "Nu aveți permisiunea de a aproba această cerere."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Aprobare cerere
+        claim_request.status = 'approved'
+        claim_request.save()
+
+        return Response(
+            {"detail": "Cererea a fost aprobată."},
+            status=status.HTTP_200_OK
+        )
+
+
+class DeclineClaimRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk, *args, **kwargs):
+        try:
+            claim_request = ClaimRequest.objects.get(pk=pk, status='pending')
+        except ClaimRequest.DoesNotExist:
+            return Response(
+                {"detail": "Cererea nu există sau nu este în așteptare."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Verifică dacă utilizatorul autentificat este proprietarul companiei
+        if claim_request.company.user != request.user:
+            return Response(
+                {"detail": "Nu aveți permisiunea de a respinge această cerere."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Respinge cererea
+        claim_request.status = 'rejected'
+        claim_request.save()
+
+        return Response(
+            {"detail": "Cererea a fost respinsă."},
+            status=status.HTTP_200_OK
+        )
 
 
 

@@ -9,6 +9,20 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.http import HttpResponseRedirect
 
+from django.contrib.admin import SimpleListFilter
+
+class CompanyTypeFilter(SimpleListFilter):
+    title = 'Tip companie'
+    parameter_name = 'company_type'
+
+    def lookups(self, request, model_admin):
+        return CompanyProfile.COMPANY_TYPE_CHOICES
+
+    def queryset(self, request, queryset):
+        if self.value() is not None:
+            return queryset.filter(company_profile__company_type=self.value())
+        return queryset
+
 @admin.register(County)
 class CountyAdmin(admin.ModelAdmin):
     list_display = ('name', 'date_created')
@@ -65,7 +79,7 @@ class CategoryAdmin(admin.ModelAdmin):
 class UserAdmin(admin.ModelAdmin):
     list_display = ['email', 'username', 'is_staff', 'is_superuser', 'get_user_type_display', 'last_login', 'first_name', 'last_name', 'email_verified', 'receive_email_status', 'is_active', 'get_account_type', 'get_company_name', 'created_at']
     search_fields = ("username", "email")
-    list_filter = ['subscription__user_type', 'is_staff']   
+    list_filter = ['subscription__user_type', 'is_staff', CompanyTypeFilter, 'account_type']   
       
     # Afișează user_type
     def get_user_type_display(self, obj):
@@ -118,8 +132,15 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
     
 @admin.register(CompanyProfile)
 class CompanyProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'company_name', 'registration_number', 'website']
-    search_fields = ['company_name', 'registration_number']    
+    list_display = ['user', 'company_name', 'registration_number', 'website', 'get_company_type']
+    search_fields = ['company_name', 'registration_number'] 
+    list_filter = ['company_type']     
+    
+    # Metodă pentru a afișa numele tipului de companie
+    def get_company_type(self, obj):
+        return obj.get_company_type_display()
+
+    get_company_type.short_description = 'Tip Companie'       
     
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):
@@ -184,6 +205,13 @@ class SuggestionAdmin(admin.ModelAdmin):
         if not obj.user:
             obj.user = request.user  # Setează utilizatorul curent, dacă nu este setat
         super().save_model(request, obj, form, change)
+        
+@admin.register(ClaimRequest)
+class ClaimRequestAdmin(admin.ModelAdmin):
+    list_display = ('user', 'company', 'status', 'created_at', 'updated_at')  # Afișează câmpurile dorite în listă
+    list_filter = ('company', 'status')  # Filtrează după companie și status
+    search_fields = ('user__email', 'company__company_name')  # Permite căutarea după email și numele companiei
+    ordering = ('-created_at',)  # Ordine descrescătoare după data creării        
         
 class ManagementCommandAdmin(admin.ModelAdmin):
     list_display = ['name', 'run_command']

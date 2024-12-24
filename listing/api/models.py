@@ -23,6 +23,9 @@ import hashlib
 from django_resized import ResizedImageField
 from django_bleach.models import BleachField
 
+# for validation
+from django.core.validators import RegexValidator
+
 class County(models.Model):
     # Câmpuri de bază
     name = models.CharField(max_length=100, unique=True)
@@ -173,10 +176,22 @@ class UserType(models.Model):
     
 
 class User(AbstractUser):
-    ACCOUNT_TYPE_CHOICES = [ ('person', 'Persoană Fizică'), ('company', 'Companie'), ]    
+    ACCOUNT_TYPE_CHOICES = [
+        ('person', 'Persoană Fizică'),
+        ('company', 'Companie'),
+        ('agent', 'Agent Imobiliar'),
+    ] 
     email = models.EmailField(unique=True)    
     id = models.UUIDField(primary_key=True, db_index=True, unique=True, default=uuid4, editable=False)
     account_type = models.CharField(max_length=10, choices=ACCOUNT_TYPE_CHOICES, default='person')    
+    company = models.ForeignKey(
+        'CompanyProfile',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='agents',
+        help_text="Compania la care este asociat acest agent imobiliar (opțional)."
+    )    
     email_verified = models.BooleanField(default=False)  
     receive_email = models.BooleanField(default=False)      
     first_name = models.CharField(max_length=60, blank=False, null=False)
@@ -194,9 +209,12 @@ class User(AbstractUser):
         self.email_verified = True
         self.save()
         
+    # Verifică numărul maxim de anunțuri permise
     def get_user_limit(self):
-        return self.USER_LIMITS.get(self.user_type, 0)    
-
+        if self.user_type:
+            return self.user_type.max_ads
+        return 0  # Dacă nu există UserType asociat
+    
     def is_email_verified(self):
         return self.email_verified
     
@@ -209,16 +227,28 @@ class User(AbstractUser):
                     # Salvează numărul în format internațional
                     self.phone_number = phonenumbers.format_number(parsed_number, phonenumbers.PhoneNumberFormat.E164)
                 except phonenumbers.NumberParseException:
-                    raise ValidationError("Numărul de telefon nu poate fi procesat.")
+                    raise ValidationError("Numărul de telefon nu poate fi procesat.")             
+        
+    def claim_company(self, company):
+        if self.account_type != 'agent':
+            raise ValidationError("Doar utilizatorii de tip 'Agent Imobiliar' pot face claim pentru o companie.")
+        if company is None:
+            raise ValidationError("Compania specificată nu este validă.")
+        self.company = company  # Asociază agentul cu compania
+        self.save()  # Salvează modificările        
 
     def save(self, *args, **kwargs):
-        # 1. Validarea și normalizarea numărului de telefon
+        # 1. Validare companie
+        if self.company and self.account_type != 'agent':
+            raise ValidationError("Doar utilizatorii de tip 'Agent Imobiliar' pot fi asociați cu o companie.")
+        
+        # 2. Validarea și normalizarea numărului de telefon
         self.clean_phone_number()
 
-        # 2. Actualizarea timestamp-ului pentru acceptarea termenilor
+        # 3. Actualizarea timestamp-ului pentru acceptarea termenilor
         self.tos_accepted_timestamp = timezone.now()
 
-        # 3. Hash-ul adresei IP, dacă este prezentă
+        # 4. Hash-ul adresei IP, dacă este prezentă
         if self.hashed_ip_address:
             hashed_ip = hashlib.sha256(self.hashed_ip_address.encode('utf-8')).hexdigest()
             self.hashed_ip_address = hashed_ip
@@ -282,12 +312,25 @@ class EmailConfirmationToken(models.Model):
             return str(self.id)  # Convert UUID to string               
 
 class CompanyProfile(models.Model):
+    COMPANY_TYPE_CHOICES = (
+        (0, 'Dezvoltator / Constructor'),
+        (1, 'Agenție Imobiliară'),
+        (2, 'Broker Ipotecar'),
+        (3, 'Instituție Financiară'),
+        (4, 'Alt Tip'),        
+    )    
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='company_profile')
     registration_number = models.CharField(max_length=255, unique=True)
     company_name = models.CharField(max_length=255)
     website = models.URLField(null=True, blank=True)
     linkedin_url = models.URLField(null=True, blank=True)
     facebook_url = models.URLField(null=True, blank=True)
+    company_type = models.IntegerField(
+        choices=COMPANY_TYPE_CHOICES,
+        null=True,
+        blank=True,
+        help_text="Tipul companiei. Poate fi lăsat necompletat."
+    )    
     
     def clean(self):
         # Validare: verifică dacă utilizatorul este de tip 'company'
@@ -303,7 +346,30 @@ class CompanyProfile(models.Model):
     def __str__(self):
         return self.company_name
     
-from django.core.validators import RegexValidator
+class ClaimRequest(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'În așteptare'),
+        ('approved', 'Aprobat'),
+        ('rejected', 'Respins'),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='claim_requests')
+    company = models.ForeignKey('CompanyProfile', on_delete=models.CASCADE, related_name='claim_requests')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def approve(self):
+        """Aprobă cererea și asociază compania cu utilizatorul."""
+        self.status = 'approved'
+        self.company.user = self.user
+        self.company.save()
+        self.save()
+
+    def reject(self):
+        """Respinge cererea."""
+        self.status = 'rejected'
+        self.save()
 
 class Address(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)   
@@ -393,7 +459,11 @@ class Listing(models.Model):
         "Suprafață utilă",
         null=True,
         blank=True
-    )       
+    )     
+    is_owner = models.BooleanField(
+        default=False,
+        help_text="Indică dacă utilizatorul a fost validat ca fiind proprietar al anunțului."
+    )      
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=0, db_index=True) 
     
     # Relații
