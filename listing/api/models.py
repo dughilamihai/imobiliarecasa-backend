@@ -183,7 +183,8 @@ class User(AbstractUser):
     ] 
     email = models.EmailField(unique=True)    
     id = models.UUIDField(primary_key=True, db_index=True, unique=True, default=uuid4, editable=False) 
-    account_type = models.CharField(max_length=10, choices=ACCOUNT_TYPE_CHOICES, default='person')    
+    account_type = models.CharField(max_length=10, choices=ACCOUNT_TYPE_CHOICES, default='person')  
+    username_hash = models.CharField(max_length=8, unique=True, blank=True, null=True)  
     profile_picture = ResizedImageField(size=[200, 200], force_format="WEBP", quality=80, upload_to='profile_pictures', null=True, blank=True)
     profile_picture_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)
     company_logo = ResizedImageField(size=[240, 60], force_format="WEBP", quality=80, upload_to='company_logos', null=True, blank=True)
@@ -258,6 +259,10 @@ class User(AbstractUser):
         if self.hashed_ip_address:
             hashed_ip = hashlib.sha256(self.hashed_ip_address.encode('utf-8')).hexdigest()
             self.hashed_ip_address = hashed_ip
+            
+        # Generare hash din username, doar dacă nu există deja
+        if not self.username_hash:
+            self.username_hash = hashlib.md5(self.username.encode()).hexdigest()[:8]            
 
         # Apelul metodei `save` a clasei părinte
         super().save(*args, **kwargs)  

@@ -15,6 +15,7 @@ from .models import *
 
 # for time operations
 from datetime import timedelta
+from django.utils.timezone import localtime
 
 # generating meta tags for listings
 from datetime import datetime
@@ -23,7 +24,7 @@ from datetime import datetime
 from django.conf import settings
 
 # for hashing
-from .utils import generate_hash
+from .utils import generate_hash, MONTHS_RO
 
 logger = logging.getLogger(__name__)
 
@@ -197,6 +198,44 @@ class UserDetailSerializer(serializers.ModelSerializer):
         if subscription and subscription.user_type:
             return subscription.user_type.type_name  # Returnează tipul de abonament
         return None  # În caz că nu există un abonament asociat    
+    
+
+class UserInfoSerializer(serializers.ModelSerializer):
+    user_type = serializers.SerializerMethodField()   
+    account_type_display = serializers.CharField(source='get_account_type_display', read_only=True)    
+    last_active = serializers.SerializerMethodField()    
+    joined_on = serializers.SerializerMethodField()     
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'phone_number', 'user_type', 'account_type_display', 'last_active', 'joined_on', 'username_hash']
+
+    
+    def get_user_type(self, obj):
+        # Obținem user_type din UserSubscription
+        subscription = obj.subscription 
+        if subscription and subscription.user_type:
+            return subscription.user_type.type_name  # Returnează tipul de abonament
+        return None  # În caz că nu există un abonament asociat     
+    
+
+    def get_last_active(self, obj):
+        if obj.last_login:
+            date = localtime(obj.last_login)
+            day = date.strftime('%d')
+            month = MONTHS_RO[date.strftime('%B')] 
+            year = date.strftime('%Y')  # Anul
+            return f"Activ pe {day} {month} {year}"
+        return "Inactiv"  # Mesaj de fallback dacă nu există `last_login`
+    
+    def get_joined_on(self, obj):
+        if obj.date_joined:
+            site_name = getattr(settings, 'SITE_NAME', 'site-ul nostru')
+            date = localtime(obj.date_joined)
+            month = MONTHS_RO[date.strftime('%B')]
+            year = date.strftime('%Y')
+            return f"Pe {site_name} din {month} {year}"
+        return "Data necunoscută"
       
       
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -966,6 +1005,49 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+    
+class ListingDetailSerializer(serializers.ModelSerializer):
+    county_name = serializers.CharField(source='county.name', read_only=True)
+    city_name = serializers.CharField(source='city.name', read_only=True)
+    neighborhood_name = serializers.CharField(source='neighborhood.name', read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    tag = TagSimpleSerializer(read_only=True, many=True)
+    user = UserInfoSerializer(read_only=True)  # Include datele despre utilizatorul care a adăugat anunțul    
+    
+    class Meta:
+        model = Listing
+        fields = [
+            'id',
+            'title',
+            'description',
+            'price',
+            'negociabil',
+            'status',
+            'photo1',
+            'photo2',
+            'photo3',
+            'photo4',
+            'photo5',
+            'photo6',
+            'photo7',
+            'photo8',
+            'photo9',
+            'video_url',
+            'latitude',
+            'longitude',
+            'created_date',
+            'valability_end_date',
+            'views_count',
+            'like_count',
+            'slug',
+            'county_name',
+            'city_name',
+            'neighborhood_name',
+            'category_name',
+            'tag',
+            'user',
+        ]
+    
  
 class ReportSerializer(serializers.ModelSerializer):
     listing = serializers.PrimaryKeyRelatedField(queryset=Listing.objects.all())

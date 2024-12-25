@@ -184,7 +184,7 @@ class UserDetailsAPIView(APIView):
     def get(self, request):
         user = request.user
         serializer = UserDetailSerializer(user)
-        return Response(serializer.data)       
+        return Response(serializer.data)              
     
 class UserUpdateAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -461,7 +461,7 @@ class ListingDetailAPIView(APIView):
             listing.save(update_fields=['views_count'])  # Optimizează salvarea doar pentru acest câmp
 
         # Serializare și răspuns
-        serializer = ListingSerializer(listing, context={'request': request})
+        serializer = ListingDetailSerializer(listing, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 # Clasă pentru ștergere
