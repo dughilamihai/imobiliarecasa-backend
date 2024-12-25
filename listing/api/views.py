@@ -368,11 +368,13 @@ class ListingAPIView(APIView):
     pagination_class = ListingPagination
 
     def get(self, request):
+      # Filtrare de bază
         queryset = Listing.objects.filter(
             status=1,
-            valability_end_date__gte=now().date()
+            valability_end_date__gte=now().date(),
+            is_active_by_user=True  # Exclude anunțurile inactive by user
         ).order_by('-created_date')
-
+        
         # Aplicare paginare directă
         paginator = self.pagination_class()
         paginated_queryset = paginator.paginate_queryset(queryset, request)
@@ -426,9 +428,9 @@ class HomeListingAPIView(APIView):
             'random': random_serializer.data,      # Datele pentru anunțuri random
         }, status=status.HTTP_200_OK)
     
-# Clasă pentru vizualizare
+# Clasă pentru vizualizare detaliată
 class ListingDetailAPIView(APIView):
-    permission_classes = [AllowAny]  # Or IsAuthenticatedOrReadOnly    
+    permission_classes = [AllowAny]  
     
     def get(self, request, slug, *args, **kwargs):
         try:
@@ -441,6 +443,13 @@ class ListingDetailAPIView(APIView):
 
         # Verifică dacă anunțul este activ sau dacă utilizatorul este proprietar
         if listing.status != 1 and listing.user != request.user:
+            return Response(
+                {"detail": "Nu aveți permisiunea să accesați acest anunț."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Verifică dacă anunțul este dezactivat de utilizator
+        if not listing.is_active_by_user and listing.user != request.user:
             return Response(
                 {"detail": "Nu aveți permisiunea să accesați acest anunț."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -463,6 +472,7 @@ class ListingDetailAPIView(APIView):
         # Serializare și răspuns
         serializer = ListingDetailSerializer(listing, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
     
 # Clasă pentru ștergere
 class ListingDeleteAPIView(APIView):
@@ -509,6 +519,18 @@ class ListingUpdateAPIView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class ToggleListingActivationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, uuid):
+        listing = Listing.objects.filter(pk=uuid, user=request.user, status=1).first()
+        if not listing:
+            return Response({"error": "Anunțul nu poate fi modificat."}, status=400)
+
+        listing.is_active_by_user = not listing.is_active_by_user
+        listing.save()
+        return Response({"is_active_by_user": listing.is_active_by_user})
 
 class ReportCreateAPIView(APIView):
     permission_classes = [AllowAny]
