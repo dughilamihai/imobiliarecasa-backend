@@ -355,11 +355,13 @@ class ListingFilter(filters.FilterSet):
     category = filters.CharFilter(field_name="category", lookup_expr="exact")
     city_id = filters.NumberFilter(field_name="city__id", lookup_expr="exact")
     year_of_construction_min = filters.NumberFilter(field_name='year_of_construction', lookup_expr='gte', label='An minim Construcție')
-    year_of_construction_max = filters.NumberFilter(field_name='year_of_construction', lookup_expr='lte', label='An maxim Construcție')    
+    year_of_construction_max = filters.NumberFilter(field_name='year_of_construction', lookup_expr='lte', label='An maxim Construcție') 
+    username_hash = filters.CharFilter(field_name="user__username_hash", lookup_expr="exact")       
+
 
     class Meta:
         model = Listing
-        fields = ['category', 'price_min', 'price_max', 'city__id', 'year_of_construction_min', 'year_of_construction_max']
+        fields = ['category', 'price_min', 'price_max', 'city__id', 'year_of_construction_min', 'year_of_construction_max', 'username_hash']
         
 class ListingAPIView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
@@ -374,6 +376,12 @@ class ListingAPIView(APIView):
             valability_end_date__gte=now().date(),
             is_active_by_user=True  # Exclude anunțurile inactive by user
         ).order_by('-created_date')
+        
+       # Aplică filtrarea definită, dar dacă nu este validă, continuă fără erori
+        filterset = self.filterset_class(request.GET, queryset=queryset)
+
+        if filterset.is_valid():
+            queryset = filterset.qs  # Aplică filtrarea definită dacă este validă  
         
         # Aplicare paginare directă
         paginator = self.pagination_class()
