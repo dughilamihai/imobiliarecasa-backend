@@ -477,6 +477,7 @@ class Listing(models.Model):
         help_text="Indică dacă utilizatorul a fost validat ca fiind proprietar al anunțului."
     )      
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=0, db_index=True) 
+    is_active_by_user = models.BooleanField(default=True)  # Default activ    
     
     # Relații
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_listings')
