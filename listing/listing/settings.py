@@ -199,7 +199,9 @@ if DEBUG:
 else:
     PAGE_SIZE = 32
     
-SUGGESTION_LIMIT = 3    
+SUGGESTION_LIMIT = 3  
+
+SITE_NAME = 'Imobiliare.Casa'  
 
 LOGGING = {
     'version': 1,

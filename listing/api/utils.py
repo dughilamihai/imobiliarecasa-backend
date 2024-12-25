@@ -32,3 +32,18 @@ def generate_hash(image_file):
     finally:
         image_file.seek(0)  # Reface poziția cursorului înainte de redimensionare
     return hash_value
+
+MONTHS_RO = {
+    "January": "ianuarie",
+    "February": "februarie",
+    "March": "martie",
+    "April": "aprilie",
+    "May": "mai",
+    "June": "iunie",
+    "July": "iulie",
+    "August": "august",
+    "September": "septembrie",
+    "October": "octombrie",
+    "November": "noiembrie",
+    "December": "decembrie",
+}
