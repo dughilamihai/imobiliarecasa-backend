@@ -55,7 +55,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'email', 'username', 'password', 'confirm_password',
-            'first_name', 'last_name', 'hashed_ip_address', 'created_at', 'full_name', 'has_accepted_tos', 'is_active', 'account_type', 'profile_picture', 'company_logo'
+            'first_name', 'last_name', 'phone_number', 'hashed_ip_address', 'created_at', 'full_name', 'has_accepted_tos', 'is_active', 'account_type', 'profile_picture', 'company_logo'
         ]
         extra_kwargs = {
             'password': {'write_only': True, 'validators': [validate_password]},
@@ -290,7 +290,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     account_type_display = serializers.CharField(source='get_account_type_display', read_only=True)    
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'account_type_display', 'profile_picture', 'company_logo' ]
+        fields = ['email', 'first_name', 'last_name', 'phone_number', 'account_type_display', 'profile_picture', 'company_logo' ]
 
     def validate_first_name(self, value):
         """

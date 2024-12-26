@@ -10,14 +10,13 @@ from mptt.models import MPTTModel, TreeForeignKey
 # for user management
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from uuid import uuid4
-from django.core.validators import MinLengthValidator
 from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError
-import phonenumbers
 from django.utils import timezone
 from django.utils.timezone import now
 from datetime import timedelta
 import hashlib
+from phonenumber_field.modelfields import PhoneNumberField
 
 # for listings
 from django_resized import ResizedImageField
@@ -201,7 +200,7 @@ class User(AbstractUser):
     receive_email = models.BooleanField(default=False)      
     first_name = models.CharField(max_length=60, blank=False, null=False)
     last_name = models.CharField(max_length=90, blank=False, null=False) 
-    phone_number = models.CharField(max_length=15, blank=True, null=True, unique=True)
+    phone_number = PhoneNumberField(region="RO", unique=True)    
     phone_verified = models.BooleanField(default=False)  
     phone_verified_at = models.DateTimeField(null=True, blank=True)             
     hashed_ip_address = models.CharField(max_length=64, blank=True, null=True)
@@ -223,18 +222,7 @@ class User(AbstractUser):
         return 0  # Dacă nu există UserType asociat
     
     def is_email_verified(self):
-        return self.email_verified
-    
-    def clean_phone_number(self):
-            if self.phone_number:
-                try:
-                    parsed_number = phonenumbers.parse(self.phone_number, "RO")  # RO pentru România
-                    if not phonenumbers.is_valid_number(parsed_number):
-                        raise ValidationError("Numărul de telefon nu este valid.")
-                    # Salvează numărul în format internațional
-                    self.phone_number = phonenumbers.format_number(parsed_number, phonenumbers.PhoneNumberFormat.E164)
-                except phonenumbers.NumberParseException:
-                    raise ValidationError("Numărul de telefon nu poate fi procesat.")             
+        return self.email_verified        
         
     def claim_company(self, company):
         if self.account_type != 'agent':
@@ -242,20 +230,17 @@ class User(AbstractUser):
         if company is None:
             raise ValidationError("Compania specificată nu este validă.")
         self.company = company  # Asociază agentul cu compania
-        self.save()  # Salvează modificările            
+        self.save()  # Salvează modificările              
 
     def save(self, *args, **kwargs):
-        # 1. Validare companie
+        # Validare companie
         if self.company and self.account_type != 'agent':
             raise ValidationError("Doar utilizatorii de tip 'Agent Imobiliar' pot fi asociați cu o companie.")
-        
-        # 2. Validarea și normalizarea numărului de telefon
-        self.clean_phone_number()
 
-        # 3. Actualizarea timestamp-ului pentru acceptarea termenilor
+        # Actualizarea timestamp-ului pentru acceptarea termenilor
         self.tos_accepted_timestamp = timezone.now()
 
-        # 4. Hash-ul adresei IP, dacă este prezentă
+        # Hash-ul adresei IP, dacă este prezentă
         if self.hashed_ip_address:
             hashed_ip = hashlib.sha256(self.hashed_ip_address.encode('utf-8')).hexdigest()
             self.hashed_ip_address = hashed_ip
