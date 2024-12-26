@@ -356,12 +356,20 @@ class ListingFilter(filters.FilterSet):
     city_id = filters.NumberFilter(field_name="city__id", lookup_expr="exact")
     year_of_construction_min = filters.NumberFilter(field_name='year_of_construction', lookup_expr='gte', label='An minim Construcție')
     year_of_construction_max = filters.NumberFilter(field_name='year_of_construction', lookup_expr='lte', label='An maxim Construcție') 
-    username_hash = filters.CharFilter(field_name="user__username_hash", lookup_expr="exact")       
+    username_hash = filters.CharFilter(field_name="user__username_hash", lookup_expr="exact")   
+    
+    # Filtre pentru suprafață utilă
+    suprafata_utila_min = filters.NumberFilter(field_name="suprafata_utila", lookup_expr="gte", label="Suprafață utilă minimă")
+    suprafata_utila_max = filters.NumberFilter(field_name="suprafata_utila", lookup_expr="lte", label="Suprafață utilă maximă")        
 
 
     class Meta:
         model = Listing
-        fields = ['category', 'price_min', 'price_max', 'city__id', 'year_of_construction_min', 'year_of_construction_max', 'username_hash']
+        fields = [
+            'category', 'price_min', 'price_max', 'city__id', 
+            'year_of_construction_min', 'year_of_construction_max', 
+            'username_hash', 'suprafata_utila_min', 'suprafata_utila_max'
+        ]
         
 class ListingAPIView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]

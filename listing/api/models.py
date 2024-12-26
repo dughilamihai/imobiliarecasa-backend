@@ -441,7 +441,16 @@ class Listing(models.Model):
         (3, '3 Camere'),
         (4, '4 Camere'),
         (5, '5+ Camere'),
-    ]       
+    ]  
+    STRUCTURA_CHOICES = [
+        (0, 'Caramida'),
+        (1, 'Beton'),
+        (2, 'BCA'),
+        (3, 'Placi'),
+        (4, 'Lemn'),
+        (5, 'Metal'),
+        (6, 'Altele'),
+    ]         
     
     # Câmpuri de bază
     id = models.UUIDField(primary_key=True, db_index=True, unique=True, default=uuid4, editable=False)       
@@ -560,7 +569,13 @@ class Listing(models.Model):
         blank=True,
         db_index=True,  
         help_text="Se aplica doar pentru apartamente, case, vile, spatii comerciale."                
-        )    
+        )   
+    structura = models.IntegerField(
+        choices=STRUCTURA_CHOICES,
+        null=True,
+        blank=True,
+        db_index=True
+    )     
     
     # SEO
     slug = models.SlugField(max_length=160, unique=True, blank=True)
