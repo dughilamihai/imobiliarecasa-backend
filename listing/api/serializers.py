@@ -483,6 +483,7 @@ class ListingSerializer(serializers.ModelSerializer):
             'numar_camere',
             'year_of_construction',
             'structura',
+            'floor',            
         ]    
 
     def validate(self, data):
@@ -494,7 +495,8 @@ class ListingSerializer(serializers.ModelSerializer):
         zonare = data.get('zonare')    
         numar_camere = data.get('numar_camere')   
         year_of_construction = data.get('year_of_construction')    
-        structura = data.get('structura')                           
+        structura = data.get('structura')   
+        floor = data.get('floor')                        
         
         # Obține categoria
         category = Category.objects.get(id=data['category_id']) 
@@ -573,7 +575,13 @@ class ListingSerializer(serializers.ModelSerializer):
         if structura is not None and category.group == 3:
             raise serializers.ValidationError({
                 'structura': 'Câmpul "Structura" nu este permis pentru această categorie.'
-            })                          
+            })        
+            
+        # Verificăm regula pentru "floor"
+        if floor is not None and category.group == 3:
+            raise serializers.ValidationError({
+                'floor': 'Câmpul "Etaj" nu este permis pentru această categorie.'
+            })                                 
             
         # Verificare imagini duplicate
         for i in range(1, 10):  # Iterează prin câmpurile foto
@@ -798,7 +806,8 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             'suprafata_utila',   
             'numar_camere',          
             'year_of_construction',   
-            'structura',                                        
+            'structura', 
+            'floor',                                                   
         ]
 
     # Validări individuale
@@ -824,6 +833,7 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
         numar_camere = data.get('numar_camere')   
         year_of_construction = data.get('year_of_construction')    
         structura = data.get('structura')   
+        floor = data.get('floor')        
     
         if 'county_id' in data:
             county = County.objects.filter(id=data['county_id']).first()
@@ -878,7 +888,13 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             if structura is not None and category.group == 3:
                 raise serializers.ValidationError({
                     'structura': 'Câmpul "Structura" nu este permis pentru această categorie.'
-                })                   
+                })  
+                
+            # Verificăm regula pentru "floor"
+            if floor is not None and category.group == 3:
+                raise serializers.ValidationError({
+                    'floor': 'Câmpul "Etaj" nu este permis pentru această categorie.'
+                })                                    
                 
         # Verificare imagini duplicate
         for i in range(1, 10):  # Iterează prin câmpurile foto
