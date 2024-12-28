@@ -18,6 +18,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 # for filtering
 from django_filters import rest_framework as filters
 from  django_filters.rest_framework import DjangoFilterBackend
+from .utils import FLOOR_CHOICES
 
 # for pagination
 from rest_framework.pagination import PageNumberPagination
@@ -360,7 +361,10 @@ class ListingFilter(filters.FilterSet):
     
     # Filtre pentru suprafață utilă
     suprafata_utila_min = filters.NumberFilter(field_name="suprafata_utila", lookup_expr="gte", label="Suprafață utilă minimă")
-    suprafata_utila_max = filters.NumberFilter(field_name="suprafata_utila", lookup_expr="lte", label="Suprafață utilă maximă")        
+    suprafata_utila_max = filters.NumberFilter(field_name="suprafata_utila", lookup_expr="lte", label="Suprafață utilă maximă")      
+    
+    # Filtrul pentru etaj
+    floor = filters.ChoiceFilter(field_name="floor", choices=FLOOR_CHOICES)      
 
 
     class Meta:
@@ -368,7 +372,7 @@ class ListingFilter(filters.FilterSet):
         fields = [
             'category', 'price_min', 'price_max', 'city__id', 
             'year_of_construction_min', 'year_of_construction_max', 
-            'username_hash', 'suprafata_utila_min', 'suprafata_utila_max'
+            'username_hash', 'suprafata_utila_min', 'suprafata_utila_max', 'floor'
         ]
         
 class ListingAPIView(APIView):

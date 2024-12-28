@@ -21,6 +21,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 # for listings
 from django_resized import ResizedImageField
 from django_bleach.models import BleachField
+from .utils import FLOOR_CHOICES
 
 # for validation
 from django.core.validators import RegexValidator
@@ -450,7 +451,7 @@ class Listing(models.Model):
         (4, 'Lemn'),
         (5, 'Metal'),
         (6, 'Altele'),
-    ]         
+    ]        
     
     # Câmpuri de bază
     id = models.UUIDField(primary_key=True, db_index=True, unique=True, default=uuid4, editable=False)       
@@ -576,6 +577,7 @@ class Listing(models.Model):
         blank=True,
         db_index=True
     )     
+    floor = models.SmallIntegerField(choices=FLOOR_CHOICES, db_index=True, null=True, blank=True)    
     
     # SEO
     slug = models.SlugField(max_length=160, unique=True, blank=True)
