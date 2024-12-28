@@ -25,6 +25,8 @@ from .utils import FLOOR_CHOICES
 
 # for validation
 from django.core.validators import RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
+from decimal import Decimal
 class County(models.Model):
     # Câmpuri de bază
     name = models.CharField(max_length=100, unique=True)
@@ -472,7 +474,18 @@ class Listing(models.Model):
         help_text="Indică dacă utilizatorul a fost validat ca fiind proprietar al anunțului."
     )      
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=0, db_index=True) 
-    is_active_by_user = models.BooleanField(default=True)  # Default activ    
+    is_active_by_user = models.BooleanField(default=True)  # Default activ   
+    buyer_commission = models.DecimalField(
+        max_digits=4,  # 2 cifre pentru partea întreagă și 2 pentru partea zecimală
+        decimal_places=2,
+        validators=[
+            MinValueValidator(Decimal('0.00')),
+            MaxValueValidator(Decimal('50.00'))  # Maxim 50.00%
+        ],
+        null=True,
+        blank=True,
+        help_text="Introduceți procentul comisionului pentru cumpărător (maxim 50%)."
+    )
     
     # Relații
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_listings')
@@ -507,24 +520,15 @@ class Listing(models.Model):
     )    
 
     # Imagini
-    photo1 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings')
-    photo1_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)    
-    photo2 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
-    photo2_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)  
-    photo3 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
-    photo3_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)      
-    photo4 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
-    photo4_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)    
-    photo5 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
-    photo5_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)    
-    photo6 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
-    photo6_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)    
-    photo7 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
-    photo7_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)    
-    photo8 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)
-    photo8_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)     
-    photo9 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)    
-    photo9_hash = models.CharField(max_length=64, blank=True, null=True, unique=True)       
+    photo1 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings')   
+    photo2 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True) 
+    photo3 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)    
+    photo4 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)    
+    photo5 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)    
+    photo6 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)   
+    photo7 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)  
+    photo8 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)   
+    photo9 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)         
 
     # Link pentru videoclip
     video_url = models.URLField(max_length=500, blank=True, null=True)
@@ -605,6 +609,12 @@ class Listing(models.Model):
         verbose_name = "Listing"
         verbose_name_plural = "Listings"
         ordering = ['-created_date']
+        
+class ImageHash(models.Model):
+    hash_value = models.CharField(max_length=64, unique=True)
+    listing_uuid = models.UUIDField(null=True, blank=True)  # Folosind UUID-ul pentru asocierea cu listing
+    photo_name = models.CharField(max_length=20, null=True, blank=True)     
+    created_at = models.DateTimeField(auto_now_add=True)         
         
 class Report(models.Model):
     PENDING = 'pending'

@@ -483,7 +483,8 @@ class ListingSerializer(serializers.ModelSerializer):
             'numar_camere',
             'year_of_construction',
             'structura',
-            'floor',            
+            'floor',   
+            'buyer_commission',      
         ]    
 
     def validate(self, data):
@@ -589,14 +590,12 @@ class ListingSerializer(serializers.ModelSerializer):
             if photo_field:
                 # Generează hash-ul imaginii
                 hash_value = generate_hash(photo_field)
-                hash_field = f"photo{i}_hash"
-
-                # Verifică dacă există un alt obiect cu același hash
-                filters = {hash_field: hash_value}
-                if Listing.objects.filter(**filters).exclude(id=self.instance.id if self.instance else None).exists():
+                
+                # Verifică dacă există un hash similar în ImageHash
+                if ImageHash.objects.filter(hash_value=hash_value).exists():
                     raise serializers.ValidationError({
                         f"photo{i}": f"Imaginea {i} există deja în sistem."
-                    })                       
+                    })                    
 
         # Returnează datele cu slug-ul validat
         data['slug'] = slug_base
@@ -674,8 +673,8 @@ class ListingSerializer(serializers.ModelSerializer):
         return value    
     
     def create(self, validated_data):
-        tag_ids = validated_data.pop('tag_ids', [])  # Extragem tag_ids din datele validate
-        
+        tag_ids = validated_data.pop('tag_ids', [])  # Extragem tag_ids din datele validate 
+
         # Rotunjim la 2 zecimale suprafata utila
         suprafata_utila = validated_data.get('suprafata_utila')
         if suprafata_utila is not None:
@@ -683,6 +682,25 @@ class ListingSerializer(serializers.ModelSerializer):
         
         # Creăm instanța fără tag-uri, fără să setăm meta_title și meta_description
         instance = super().create(validated_data)
+
+        # După crearea instanței, accesează uuid
+        uuid_value = instance.id  # Accesează uuid-ul
+        
+        # Generare hash pentru câmpurile foto și salvarea în ImageHash
+        for i in range(1, 10):
+            photo_field = validated_data.get(f"photo{i}")
+            if photo_field:
+                # Generează hash-ul pentru imaginea curentă
+                hash_value = generate_hash(photo_field)  # Funcția care generează hash-ul            
+
+            # Verificăm dacă hash-ul există deja în ImageHash
+            if not ImageHash.objects.filter(hash_value=hash_value).exists():
+                # Crează un obiect ImageHash și salvează-l
+                ImageHash.objects.create(
+                    listing_uuid = uuid_value,  # Accesează uuid-ul
+                    photo_name=photo_field.name,
+                    hash_value=hash_value,
+                )  
         
         # Legăm tag-urile la Listing dacă există ID-uri
         if tag_ids:
@@ -807,7 +825,8 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             'numar_camere',          
             'year_of_construction',   
             'structura', 
-            'floor',                                                   
+            'floor',   
+            'buyer_commission',                                                              
         ]
 
     # Validări individuale
@@ -896,20 +915,7 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
                     'floor': 'Câmpul "Etaj" nu este permis pentru această categorie.'
                 })                                    
                 
-        # Verificare imagini duplicate
-        for i in range(1, 10):  # Iterează prin câmpurile foto
-            photo_field = data.get(f"photo{i}")
-            if photo_field:
-                # Generează hash-ul imaginii
-                hash_value = generate_hash(photo_field)
-                hash_field = f"photo{i}_hash"
-
-                # Verifică dacă există un alt obiect cu același hash
-                filters = {hash_field: hash_value}
-                if Listing.objects.filter(**filters).exclude(id=self.instance.id if self.instance else None).exists():
-                    raise serializers.ValidationError({
-                        f"photo{i}": f"Imaginea {i} există deja în sistem."
-                    })                                                       
+        # Iterează prin câmpurile foto
 
         return data
     
@@ -971,14 +977,41 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             if Listing.objects.filter(slug=slug_base).exclude(pk=instance.pk).exists():
                 raise serializers.ValidationError("Slug-ul recalculat există deja. Modificați titlul sau alte date.")
             validated_data['slug'] = slug_base
+            
+        # Ștergem toate hash-urile asociate instanței
+        ImageHash.objects.filter(listing_uuid=instance.id).delete()
+
+        # Verificare și generare hash pentru noile imagini
+        for i in range(1, 10):
+            photo_field = validated_data.get(f"photo{i}")
+            if photo_field:
+                hash_value = generate_hash(photo_field)
+
+                # Verificăm dacă hash-ul există deja în ImageHash
+                if ImageHash.objects.filter(hash_value=hash_value).exists():
+                    raise serializers.ValidationError({
+                        f"photo{i}": f"Imaginea {i} există deja în sistem."
+                    })
+                else:
+                    # Dacă hash-ul nu există, îl adăugăm în tabela ImageHash
+                    ImageHash.objects.create(
+                    listing_uuid = instance.id,  # Accesează uuid-ul
+                    photo_name=photo_field.name,
+                    hash_value=hash_value,
+                )  
+        
 
         # Gestionare tag-uri
         tag_ids = validated_data.pop('tag_ids', None)
         if tag_ids is not None:
-            tags = Tag.objects.filter(id__in=tag_ids)
-            instance.tag.set(tags)
-            tag_list = ", ".join(tag.name for tag in tags)
+            # Obține doar tag-urile valide
+            valid_tags = Tag.objects.filter(id__in=tag_ids)
+            
+            # Setează tag-urile valide pe instanță
+            instance.tag.set(valid_tags)
+            tag_list = ", ".join(tag.name for tag in valid_tags)
         else:
+            # Dacă nu există tag_ids în request, obține tag-urile existente
             tag_list = ", ".join(tag.name for tag in instance.tag.all())
 
         # Obține valori pentru categoria și orașul curent

@@ -8,6 +8,7 @@ from django.urls import path
 from django.utils.html import format_html
 from django.urls import reverse
 from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 
 from django.contrib.admin import SimpleListFilter
 
@@ -157,7 +158,25 @@ class TagAdmin(admin.ModelAdmin):
     list_display = ('name', 'status', 'slug', 'date_created')
     list_filter = ('status',)
     search_fields = ('name', 'slug')
+    
+@admin.register(ImageHash)
+class ImageHashAdmin(admin.ModelAdmin):
+    list_display = ('hash_value', 'listing_id', 'photo_name', 'created_at')  # Afișează Listing ID în loc de Listing Name
+    search_fields = ('hash_value', 'photo_name', 'listing_uuid')  # Permite căutarea și după UUID-ul listingului
+    
+    # Metodă pentru afișarea ID-ului listingului
+    def listing_id(self, obj):
+        if obj.listing_uuid:
+            listing = get_object_or_404(Listing, id=obj.listing_uuid)
+            return listing.id  # Returnează ID-ul Listing-ului
+        return 'N/A'  # Dacă nu există listing_uuid
+    listing_id.short_description = 'Listing ID'  # Eticheta pentru coloana
 
+    # Metodă pentru afișarea numelui pozei
+    def photo_name(self, obj):
+        return obj.photo_name if obj.photo_name else 'N/A'
+    photo_name.short_description = 'Photo Name'
+    
 @admin.register(Listing)
 class ListingAdmin(admin.ModelAdmin):
     # Afișează UUID-ul, alături de alte câmpuri
