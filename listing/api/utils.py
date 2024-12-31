@@ -5,6 +5,12 @@ from django.template.loader import get_template
 # for hashing
 import hashlib
 
+# for similar listings
+from django.db.models import Q
+from django.db.models.functions import Abs
+from django.db.models import F
+from .models import Listing
+
 def send_confirmation_email(email, token_id, user_id):
     data = {
         'token_id': str(token_id),
@@ -17,6 +23,72 @@ def send_confirmation_email(email, token_id, user_id):
               recipient_list=[email],
               fail_silently= True)
     print("Email-ul de confirmarea  fost trimis catre " + email)
+    
+def get_similar_listings(listing_id):
+    try:
+        # Preia anunțul original
+        listing = Listing.objects.get(id=listing_id)
+    except Listing.DoesNotExist:
+        return None
+
+    # Filtre de bază
+    filters = Q(is_active_by_user=True) & Q(status=1) & Q(city=listing.city) & Q(category=listing.category)
+
+    # Include neighborhood dacă există
+    primary_filters = filters
+    if listing.neighborhood:
+        primary_filters &= Q(neighborhood=listing.neighborhood)
+
+    # Caută anunțuri care respectă toate condițiile, inclusiv neighborhood
+    # Nu tine cont de scorul combinat
+    # similar_listings = list(
+    #     Listing.objects.filter(primary_filters)
+    #     .annotate(
+    #         price_diff=Abs(listing.price - F('price')),
+    #         surface_diff=Abs(listing.suprafata_utila - F('suprafata_utila')),
+    #         year_diff=Abs(listing.year_of_construction - F('year_of_construction'))
+    #     )
+    #     .exclude(id=listing.id)  # Exclude anunțul original
+    #     .order_by('price_diff', 'surface_diff', 'year_diff')[:4]
+    # )
+    
+    # Caută anunțuri care respectă toate condițiile, inclusiv neighborhood
+    similar_listings = list(
+    Listing.objects.filter(primary_filters)
+    .annotate(
+        price_diff=Abs(listing.price - F('price')),
+        surface_diff=Abs(listing.suprafata_utila - F('suprafata_utila')),
+        year_diff=Abs(listing.year_of_construction - F('year_of_construction')),
+        # Calculăm un scor combinat
+        total_score=F('price_diff') + F('surface_diff') + F('year_diff')
+    )
+    .exclude(id=listing.id)  # Exclude anunțul original
+    .order_by('total_score')[:4]  # Ordonează după scor total
+)
+
+    # Dacă nu sunt suficiente rezultate, completează fără neighborhood
+    if len(similar_listings) < 4:
+        # Pregătește lista ID-urilor deja incluse
+        included_ids = [listing.id for listing in similar_listings]
+        
+        fallback_filters = filters  # Ignoră neighborhood
+        fallback_listings = (
+            Listing.objects.filter(fallback_filters)
+            .exclude(id__in=included_ids)  # Exclude anunțurile deja incluse
+            .annotate(
+                price_diff=Abs(listing.price - F('price')),
+                surface_diff=Abs(listing.suprafata_utila - F('suprafata_utila')),
+                year_diff=Abs(listing.year_of_construction - F('year_of_construction'))
+            )
+            .exclude(id=listing.id)  # Exclude anunțul original
+            .order_by('price_diff', 'surface_diff', 'year_diff')[:4 - len(similar_listings)]
+        )
+
+        # Completează rezultatele
+        similar_listings += list(fallback_listings)
+
+    return similar_listings
+
     
 def generate_hash(image_file):
     """
@@ -33,45 +105,4 @@ def generate_hash(image_file):
         image_file.seek(0)  # Reface poziția cursorului înainte de redimensionare
     return hash_value
 
-MONTHS_RO = {
-    "January": "ianuarie",
-    "February": "februarie",
-    "March": "martie",
-    "April": "aprilie",
-    "May": "mai",
-    "June": "iunie",
-    "July": "iulie",
-    "August": "august",
-    "September": "septembrie",
-    "October": "octombrie",
-    "November": "noiembrie",
-    "December": "decembrie",
-}
 
-# Definim opțiunile pentru etaj
-FLOOR_CHOICES = [
-    (0, 'Demisol'),
-    (1, 'Parter'),
-    (2, 'Etaj 1'),
-    (3, 'Etaj 2'),
-    (4, 'Etaj 3'),
-    (5, 'Etaj 4'),
-    (6, 'Etaj 5'),
-    (7, 'Etaj 6'),
-    (8, 'Etaj 7'),
-    (9, 'Etaj 8'),
-    (10, 'Etaj 9'),
-    (11, 'Etaj 10'),
-    (12, 'Etaj 11'),
-    (13, 'Etaj 12'),
-    (14, 'Etaj 13'),
-    (15, 'Etaj 14'),
-    (16, 'Etaj 15'),
-    (17, 'Etaj 16'),
-    (18, 'Etaj 17'),
-    (19, 'Etaj 18'),
-    (20, 'Etaj 19'),
-    (21, 'Etaj 20'),
-    (22, 'Mansarda'),
-    (23, 'Ultimele 2 etaje'),
-]

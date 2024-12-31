@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework import status
 from django.conf import settings
 # send confirmation email after user sign up
-from api.utils import send_confirmation_email
+from .utils import send_confirmation_email, get_similar_listings
 
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
@@ -17,8 +17,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 # for filtering
 from django_filters import rest_framework as filters
-from  django_filters.rest_framework import DjangoFilterBackend
-from .utils import FLOOR_CHOICES
+from django_filters.rest_framework import DjangoFilterBackend
+from .constants import FLOOR_CHOICES
 
 # for pagination
 from rest_framework.pagination import PageNumberPagination
@@ -437,9 +437,9 @@ class HomeListingAPIView(APIView):
         ).order_by('?')[:8]
 
         # Serializăm datele
-        latest_serializer = ListingSerializer(latest_listings, many=True)
-        liked_serializer = ListingSerializer(most_liked_listings, many=True)
-        random_serializer = ListingSerializer(random_listings, many=True)
+        latest_serializer = ListingMinimalSerializer(latest_listings, many=True)
+        liked_serializer = ListingMinimalSerializer(most_liked_listings, many=True)
+        random_serializer = ListingMinimalSerializer(random_listings, many=True)
 
         # Returnăm datele într-un răspuns structurat
         return Response({
@@ -551,6 +551,46 @@ class ToggleListingActivationView(APIView):
         listing.is_active_by_user = not listing.is_active_by_user
         listing.save()
         return Response({"is_active_by_user": listing.is_active_by_user})
+
+class SimilarListingsAPIView(APIView):
+    permission_classes = [AllowAny]
+
+
+    @method_decorator(cache_page(CACHE_TIMEOUT))
+    def get(self, request, uuid, *args, **kwargs):
+        try:
+            # Verifică dacă anunțul există
+            listing = Listing.objects.get(id=uuid)
+        except Listing.DoesNotExist:
+            return Response(
+                {"detail": "Anunțul nu a fost găsit."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Verifică dacă anunțul este activ
+        if listing.status != 1:
+            return Response(
+                {"detail": "Anunțul nu este activ."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Verifică dacă anunțul este dezactivat de utilizator
+        if not listing.is_active_by_user:
+            return Response(
+                {"detail": "Anunțul este dezactivat."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Găsește anunțuri similare
+        similar_listings = get_similar_listings(uuid)
+
+        # Dacă nu sunt găsite anunțuri similare, returnăm un array gol
+        if not similar_listings:
+            return Response([], status=status.HTTP_200_OK)
+
+        # Serializăm anunțurile similare
+        serializer = ListingMinimalSerializer(similar_listings, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class ReportCreateAPIView(APIView):
     permission_classes = [AllowAny]
