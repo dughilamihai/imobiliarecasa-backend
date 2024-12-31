@@ -27,7 +27,8 @@ urlpatterns = [
     path('listings/<slug:slug>/', ListingDetailAPIView.as_view(), name='listing-detail'), # Pentru VIEW
     path('listings/<uuid:uuid>/delete/', ListingDeleteAPIView.as_view(), name='listing-delete'),  # Pentru DELETE
     path('listings/<uuid:uuid>/update/', ListingUpdateAPIView.as_view(), name='listing-update'), # Pentru UPDATE 
-    path('listings/<uuid:uuid>/toggle-activation/', ToggleListingActivationView.as_view(), name='toggle-listing-activation'), # user can toggle their listing  
+    path('listings/<uuid:uuid>/toggle-activation/', ToggleListingActivationView.as_view(), name='toggle-listing-activation'), # user can toggle their listing 
+    path('listings/<uuid:uuid>/similar/', SimilarListingsAPIView.as_view(), name='listing-similar'),     
     path('reports/<uuid:uuid>/', ReportCreateAPIView.as_view(), name='report-create'), # Ruta pentru a crea un raport
     path('suggestions/', SuggestionCreateAPIView.as_view(), name='create-suggestion'),    
 ]

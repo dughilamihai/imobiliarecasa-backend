@@ -180,8 +180,8 @@ class ImageHashAdmin(admin.ModelAdmin):
 @admin.register(Listing)
 class ListingAdmin(admin.ModelAdmin):
     # Afișează UUID-ul, alături de alte câmpuri
-    list_display = ('id', 'title', 'status', 'county', 'city', 'neighborhood', 'expired', 'username')  # Afișează UUID-ul
-    list_filter = ('city', 'county', 'tag__name')  # Permite filtrarea după city, county și tags
+    list_display = ('id', 'title', 'status', 'county', 'city', 'neighborhood', 'category__name', 'expired', 'username')  # Afișează UUID-ul
+    list_filter = ('city', 'county', 'tag__name', 'category__name')  # Permite filtrarea după city, county și tags
     search_fields = ('title', 'county__name', 'city__name', 'id')  # Permite căutarea după UUID (id)
     filter_horizontal = ('tag',)  # Permite selecția etichetelor într-un mod intuitiv    
 
@@ -194,7 +194,13 @@ class ListingAdmin(admin.ModelAdmin):
     def username(self, obj):
         return obj.user.username  # Afișează username-ul utilizatorului
 
-    username.short_description = 'Username'  # Etichetă pentru coloană     
+    username.short_description = 'Username'  # Etichetă pentru coloană    
+    
+        # Metodă pentru a afișa category_name
+    def category_name(self, obj):
+        return obj.category.name  # Afișează numele categoriei
+
+    category_name.short_description = 'Category Name'  # Etichetă pentru coloană 
 
 @admin.register(Report)
 class ReportAdmin(admin.ModelAdmin):

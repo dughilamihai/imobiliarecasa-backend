@@ -24,7 +24,9 @@ from datetime import datetime
 from django.conf import settings
 
 # for hashing
-from .utils import generate_hash, MONTHS_RO
+from .utils import generate_hash
+
+from .constants import MONTHS_RO
 
 logger = logging.getLogger(__name__)
 
@@ -1113,6 +1115,24 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             'user',
         ]
     
+
+class ListingMinimalSerializer(serializers.ModelSerializer):
+    neighborhood_name = serializers.CharField(source='neighborhood.name', read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    
+    class Meta:
+        model = Listing
+        fields = [
+            'title',
+            'description',
+            'price',
+            'negociabil',
+            'slug',
+            'photo1',
+            'numar_camere',
+            'neighborhood_name',
+            'category_name',
+        ]
  
 class ReportSerializer(serializers.ModelSerializer):
     listing = serializers.PrimaryKeyRelatedField(queryset=Listing.objects.all())

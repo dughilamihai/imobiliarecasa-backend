@@ -21,7 +21,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 # for listings
 from django_resized import ResizedImageField
 from django_bleach.models import BleachField
-from .utils import FLOOR_CHOICES
+from .constants import FLOOR_CHOICES
 
 # for validation
 from django.core.validators import RegexValidator
