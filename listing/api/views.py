@@ -400,7 +400,7 @@ class ListingAPIView(APIView):
         paginated_queryset = paginator.paginate_queryset(queryset, request)
 
         # Serializare
-        serializer = ListingSerializer(paginated_queryset, many=True)
+        serializer = ListingMinimalSerializer(paginated_queryset, many=True)
         return paginator.get_paginated_response(serializer.data)
     
     def post(self, request):

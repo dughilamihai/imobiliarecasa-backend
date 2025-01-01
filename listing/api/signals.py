@@ -1,9 +1,8 @@
-from django.db.models.signals import pre_save
-from django.db.models.signals import pre_delete
+from django.db.models.signals import pre_save, pre_delete, post_save
 from django.dispatch import receiver
-from .utils import generate_hash
 from api.models import User, ImageHash, Listing
 import os
+from PIL import Image
 
 @receiver(pre_save, sender=User)
 def delete_old_file_on_update(sender, instance, **kwargs):
@@ -49,6 +48,30 @@ def delete_files_on_listing_delete(sender, instance, **kwargs):
                 image_hashes.delete()  # Șterge toate instanțele asociate cu listing_uuid
                 break  # Oprire buclă după ce am șters toate instanțele    
 
+@receiver(post_save, sender=Listing)
+def generate_or_update_thumbnail(sender, instance, created, **kwargs):
+    if instance.photo1:  # Asigură-te că există o imagine în photo1
+        # Calea completă a imaginii principale
+        photo1_path = instance.photo1.path
 
+        # Directorul pentru thumbnail-uri
+        media_root = os.path.dirname(photo1_path).rsplit('listings', 1)[0]  # Obține directorul 'media'
+        thumbnail_dir = os.path.join(media_root, 'thumbs')
+        os.makedirs(thumbnail_dir, exist_ok=True)
 
-  
+        # Numele pentru thumbnail
+        thumbnail_name = f"thumb_{os.path.basename(photo1_path)}"
+        thumbnail_path = os.path.join(thumbnail_dir, thumbnail_name)
+
+        # Generăm thumbnail-ul dacă nu există deja sau dacă s-a schimbat imaginea
+        if not os.path.exists(thumbnail_path) or instance.thumbnail.name != os.path.join('thumbs', thumbnail_name):
+            with Image.open(photo1_path) as img:
+                img.thumbnail((300, 240))  # Dimensiunile pentru thumbnail
+                img.save(thumbnail_path, "WEBP", quality=80)
+
+        # Actualizăm câmpul thumbnail cu calea relativă
+        relative_thumbnail_path = os.path.join('thumbs', thumbnail_name)  # Director relativ
+        if instance.thumbnail.name != relative_thumbnail_path:
+            instance.thumbnail.name = relative_thumbnail_path
+            instance.save(update_fields=['thumbnail'])
+

@@ -180,7 +180,7 @@ class ImageHashAdmin(admin.ModelAdmin):
 @admin.register(Listing)
 class ListingAdmin(admin.ModelAdmin):
     # Afișează UUID-ul, alături de alte câmpuri
-    list_display = ('id', 'title', 'status', 'county', 'city', 'neighborhood', 'category__name', 'expired', 'username')  # Afișează UUID-ul
+    list_display = ('id', 'title', 'status', 'county', 'city', 'neighborhood', 'category__name', 'expired', 'username', 'thumbnail_preview')  # Afișează UUID-ul
     list_filter = ('city', 'county', 'tag__name', 'category__name')  # Permite filtrarea după city, county și tags
     search_fields = ('title', 'county__name', 'city__name', 'id')  # Permite căutarea după UUID (id)
     filter_horizontal = ('tag',)  # Permite selecția etichetelor într-un mod intuitiv    
@@ -201,6 +201,16 @@ class ListingAdmin(admin.ModelAdmin):
         return obj.category.name  # Afișează numele categoriei
 
     category_name.short_description = 'Category Name'  # Etichetă pentru coloană 
+    
+   # Funcție pentru a afișa thumbnail-ul redimensionat
+    def thumbnail_preview(self, obj):
+        if obj.thumbnail:
+            return format_html(
+                '<img src="{}" width="100" height="80" style="object-fit: cover;" />', 
+                obj.thumbnail.url
+            )
+        return "No Image"
+    thumbnail_preview.short_description = 'Thumbnail'    
 
 @admin.register(Report)
 class ReportAdmin(admin.ModelAdmin):

@@ -528,7 +528,16 @@ class Listing(models.Model):
     photo6 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)   
     photo7 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)  
     photo8 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)   
-    photo9 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)         
+    photo9 = ResizedImageField(size=[800, 600], force_format="WEBP", quality=80, upload_to='listings', blank=True, null=True)     
+    # Thumbnail-ul
+    thumbnail = ResizedImageField(
+        size=[300, 240],  # Dimensiuni pentru thumbnail
+        force_format="WEBP", 
+        quality=80, 
+        upload_to='thumbs',  # Directorul pentru thumbnail-uri
+        blank=True, 
+        null=True
+    )        
 
     # Link pentru videoclip
     video_url = models.URLField(max_length=500, blank=True, null=True)
