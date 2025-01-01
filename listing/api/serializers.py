@@ -916,9 +916,6 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     'floor': 'Câmpul "Etaj" nu este permis pentru această categorie.'
                 })                                    
-                
-        # Iterează prin câmpurile foto
-
         return data
     
     def validate_suprafata_utila(self, value):
@@ -1128,7 +1125,7 @@ class ListingMinimalSerializer(serializers.ModelSerializer):
             'price',
             'negociabil',
             'slug',
-            'photo1',
+            'thumbnail',
             'numar_camere',
             'neighborhood_name',
             'category_name',
