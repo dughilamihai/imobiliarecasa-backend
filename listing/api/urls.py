@@ -23,12 +23,14 @@ urlpatterns = [
     path('user-update/', UserUpdateAPIView.as_view(), name='user-update'),  
     path('tags/', TagListView.as_view(), name='tag-list'),             
     path('listings/', ListingAPIView.as_view(), name='listing-list'),
-    path('listings/home/', HomeListingAPIView.as_view(), name='home-listings'),     
+    path('listings/home/', HomeListingAPIView.as_view(), name='home-listings'),      
+    path('listings/liked-listings/', LikedListingsAPIView.as_view(), name='liked_listings'),        
     path('listings/<slug:slug>/', ListingDetailAPIView.as_view(), name='listing-detail'), # Pentru VIEW
     path('listings/<uuid:uuid>/delete/', ListingDeleteAPIView.as_view(), name='listing-delete'),  # Pentru DELETE
     path('listings/<uuid:uuid>/update/', ListingUpdateAPIView.as_view(), name='listing-update'), # Pentru UPDATE 
     path('listings/<uuid:uuid>/toggle-activation/', ToggleListingActivationView.as_view(), name='toggle-listing-activation'), # user can toggle their listing 
     path('listings/<uuid:uuid>/similar/', SimilarListingsAPIView.as_view(), name='listing-similar'),     
+    path('listings/<uuid:uuid>/toggle-like/', ToggleLikeAPIView.as_view(), name='toggle_like'), 
     path('reports/<uuid:uuid>/', ReportCreateAPIView.as_view(), name='report-create'), # Ruta pentru a crea un raport
     path('suggestions/', SuggestionCreateAPIView.as_view(), name='create-suggestion'),    
 ]

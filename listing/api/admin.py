@@ -177,6 +177,12 @@ class ImageHashAdmin(admin.ModelAdmin):
         return obj.photo_name if obj.photo_name else 'N/A'
     photo_name.short_description = 'Photo Name'
     
+@admin.register(Like)
+class LikeAdmin(admin.ModelAdmin):
+    list_display = ('user', 'listing', 'created_at')  # Afișează aceste coloane în listă
+    search_fields = ('user__username', 'listing__title')  # Permite căutarea după username și titlul anunțului
+    list_filter = ('created_at',)  # Filtru pentru data creării    
+    
 @admin.register(Listing)
 class ListingAdmin(admin.ModelAdmin):
     # Afișează UUID-ul, alături de alte câmpuri

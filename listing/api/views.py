@@ -540,6 +540,44 @@ class ListingUpdateAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+class LikedListingsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    pagination_class = ListingPagination
+
+    def get(self, request):
+        # Obține anunțurile pe care utilizatorul autentificat le-a likat
+        liked_listings = Listing.objects.filter(likes__user=request.user, status=1).distinct()
+        
+        # Aplicare paginare directă
+        paginator = self.pagination_class()
+        paginated_queryset = paginator.paginate_queryset(liked_listings, request)
+
+        # Serializare
+        serializer = ListingMinimalSerializer(paginated_queryset, many=True)
+        return paginator.get_paginated_response(serializer.data)
+    
+    
+class ToggleLikeAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, uuid):
+       # Filtrăm anunțul pe baza UUID-ului și statusului activ
+        listing = Listing.objects.filter(pk=uuid, status=1).first()
+
+        if not listing:
+            # Returnăm un răspuns personalizat cu statusul 404
+            return Response({"error": "Anunțul nu a fost găsit sau nu este activ."}, status=404)
+
+        # Verificăm dacă utilizatorul încearcă să dea like propriului anunț
+        if listing.user == request.user:
+            return Response({"error": "Nu poți aprecia propriile anunțuri."}, status=403)
+
+        # Folosim metoda din model pentru gestionarea like-urilor
+        liked = listing.toggle_like(request.user)
+
+        # Returnăm răspunsul JSON cu starea curentă
+        return Response({'liked': liked, 'like_count': listing.like_count})
+    
 class ToggleListingActivationView(APIView):
     permission_classes = [IsAuthenticated]
 

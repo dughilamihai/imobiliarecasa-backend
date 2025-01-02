@@ -416,7 +416,15 @@ class Tag(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.name)
-        super().save(*args, **kwargs)    
+        super().save(*args, **kwargs)  
+        
+class Like(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes')
+    listing = models.ForeignKey('Listing', on_delete=models.CASCADE, related_name='likes')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'listing')  # Un utilizator poate da like o singură dată la un anunț            
 
 class Listing(models.Model):
     STATUS_CHOICES = [
@@ -610,6 +618,24 @@ class Listing(models.Model):
             self.slug = slug_base                         
                         
         super(Listing, self).save(*args, **kwargs)  
+        
+    # Metodă pentru gestionarea like-urilor
+    def toggle_like(self, user):
+        # Verifică dacă utilizatorul a dat deja like
+        like, created = Like.objects.get_or_create(user=user, listing=self)
+
+        if not created:
+            # Dacă like-ul există deja, îl eliminăm
+            like.delete()
+            self.like_count -= 1  # Scădem 1 din like_count
+        else:
+            # Dacă like-ul nu există, îl adăugăm
+            self.like_count += 1  # Adăugăm 1 la like_count
+
+        # Salvează actualizarea în baza de date
+        self.save(update_fields=['like_count'])
+        
+        return created  # Returnează True dacă like-ul a fost adăugat, False dacă a fost eliminat     
       
     def __str__(self):
         return f"{self.title} - {self.price} {dict(self.CURRENCY_CHOICES).get(self.currency)}"
