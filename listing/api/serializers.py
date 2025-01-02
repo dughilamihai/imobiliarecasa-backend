@@ -1127,6 +1127,7 @@ class ListingMinimalSerializer(serializers.ModelSerializer):
             'slug',
             'thumbnail',
             'numar_camere',
+            'like_count',
             'neighborhood_name',
             'category_name',
         ]
