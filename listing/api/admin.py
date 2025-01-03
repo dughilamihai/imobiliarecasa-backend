@@ -252,7 +252,26 @@ class ClaimRequestAdmin(admin.ModelAdmin):
     list_display = ('user', 'company', 'status', 'created_at', 'updated_at')  # Afișează câmpurile dorite în listă
     list_filter = ('company', 'status')  # Filtrează după companie și status
     search_fields = ('user__email', 'company__company_name')  # Permite căutarea după email și numele companiei
-    ordering = ('-created_at',)  # Ordine descrescătoare după data creării        
+    ordering = ('-created_at',)  # Ordine descrescătoare după data creării    
+    
+
+@admin.register(PasswordResetAttempt)
+class PasswordResetAttemptAdmin(admin.ModelAdmin):
+    list_display = ('email', 'username', 'attempts', 'last_attempt')  # Câmpurile afișate în lista din admin
+    search_fields = ('email',)  # Permite căutarea după email
+    readonly_fields = ('username',)  # `username` este doar pentru afișare, nu modificabil
+    
+    def username(self, obj):
+        """
+        Returnează username-ul asociat email-ului sau 'No user' dacă email-ul nu aparține unui utilizator.
+        """
+        try:
+            user = User.objects.get(email=obj.email)
+            return user.username
+        except User.DoesNotExist:
+            return "No user"
+
+    username.short_description = "Username"        
         
 class ManagementCommandAdmin(admin.ModelAdmin):
     list_display = ['name', 'run_command']

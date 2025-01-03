@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from api.views import CustomTokenObtainPairView
+from api.views import CustomTokenObtainPairView, PasswordResetRequestView, PasswordResetConfirmView
 
 # for static files
 from django.conf import settings
@@ -37,6 +37,8 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),  # Refresh token
     path('api/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),  # Logout (blacklist token)
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),  # Verificare token (opțional)    
+    path('api/password-reset/', PasswordResetRequestView.as_view(), name='password_reset_request'),
+    path('api/password-reset/confirm/<uidb64>/<token>/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),  
 ]
 
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

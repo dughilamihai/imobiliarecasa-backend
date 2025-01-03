@@ -31,6 +31,15 @@ from django.views.decorators.cache import cache_page
 # every user will be able to see all the listings, but only logged-in users will be able to add, change, or delete objects.
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
+# for sending emails
+from django.core.mail import send_mail
+
+# for user reset password
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.template.loader import get_template
+from django.urls import reverse
+
 import logging
 from .models import *
 from .serializers import *
@@ -198,7 +207,6 @@ class UserUpdateAPIView(APIView):
             return Response({'detail': 'Detaliile utilizatorului au fost actualizate cu succes.'}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-
 class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -254,6 +262,103 @@ class ChangePasswordView(APIView):
                 return Response({'message': 'Nu am reușit să blacklistez token-ul refresh.', 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({'detail': 'Parola a fost schimbată cu succes.'}, status=status.HTTP_200_OK)
+    
+# Token generator pentru resetarea parolei
+token_generator = PasswordResetTokenGenerator()
+
+def send_reset_email(email, user):
+    """
+    Trimite email pentru resetarea parolei cu un token unic.
+    """
+    # Crează un token de resetare pentru utilizator
+    token = token_generator.make_token(user)
+    uid = urlsafe_base64_encode(str(user.id).encode())
+    
+    # Crează link-ul pentru resetarea parolei folosind FRONTEND_URL
+    reset_link = reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
+    full_url = f'{settings.FRONTEND_URL}{reset_link}'  # Folosește URL-ul frontend-ului din settings.py
+    
+    # Date pentru template-ul de email
+    data = {
+        'reset_link': full_url,
+        'user_id': user.id,
+        'token': token
+    }
+    
+    # Încărcăm template-ul de email
+    message = get_template('reset_password_email.txt').render(data)
+    
+    # Trimite email-ul
+    send_mail(
+        subject="Resetare parolă",
+        message=message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[email],
+    )
+
+
+class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]    
+
+    def post(self, request, *args, **kwargs):
+        email = request.data.get("email", "").strip()
+
+        if not email:
+            return Response({"detail": "Adresa de email este necesară."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verifică dacă utilizatorul există
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # Răspuns generalizat (evită dezvăluirea existenței email-ului)
+            return Response(
+                {"detail": "Dacă adresa de email există în baza noastră de date, vei primi un mesaj cu instrucțiuni."},
+                status=status.HTTP_200_OK
+            )
+
+        # Verifică dacă utilizatorul a depășit numărul maxim de încercări de resetare
+        password_reset_attempt, created = PasswordResetAttempt.objects.get_or_create(email=email)
+
+        # Dacă sunt prea multe încercări, nu permite resetarea
+        if not password_reset_attempt.can_attempt_reset():
+            return Response(
+                {"detail": "Ai atins numărul maxim de încercări de resetare a parolei. Încearcă din nou mai târziu."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Trimite email pentru resetare
+        send_reset_email(email, user)
+
+        # Actualizează numărul de încercări
+        password_reset_attempt.attempts += 1
+        password_reset_attempt.last_attempt = now()
+        password_reset_attempt.save()
+
+        return Response(
+            {"detail": "Dacă adresa de email există în baza noastră de date, vei primi un mesaj cu instrucțiuni."},
+            status=status.HTTP_200_OK
+        )
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]      
+    def post(self, request, uidb64, token, *args, **kwargs):
+        try:
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = User.objects.get(id=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response({"detail": "Linkul este invalid sau a expirat."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not token_generator.check_token(user, token):
+            return Response({"detail": "Token invalid."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Dacă tokenul este valid, resetează parola
+        new_password = request.data.get('password')
+        if new_password:
+            user.set_password(new_password)
+            user.save()
+            return Response({"detail": "Parola a fost resetată cu succes."}, status=status.HTTP_200_OK)
+        else:
+            return Response({"detail": "Parola nu a fost furnizată."}, status=status.HTTP_400_BAD_REQUEST)
     
 class UserAddressAPIView(APIView):
     permission_classes = [IsAuthenticated]

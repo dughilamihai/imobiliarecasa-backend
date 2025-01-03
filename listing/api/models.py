@@ -393,6 +393,29 @@ class Address(models.Model):
     def __str__(self):
         return f"Adresa {self.user.username} - {self.strada} {self.strada_numar}, {self.oras}, {self.judet}, {self.tara}"  
     
+
+class PasswordResetAttempt(models.Model):
+    email = models.EmailField(unique=True)  # Email-ul utilizatorului
+    attempts = models.PositiveIntegerField(default=0)  # Numărul de încercări
+    last_attempt = models.DateTimeField(default=now)  # Ultima încercare
+
+    def reset_attempts_if_necessary(self, interval_minutes=120):
+        """
+        Resetează numărul de încercări dacă intervalul de timp a trecut.
+        """
+        from datetime import timedelta
+
+        if now() - self.last_attempt > timedelta(minutes=interval_minutes):
+            self.attempts = 0
+            self.save()
+
+    def can_attempt_reset(self, max_attempts=2, interval_minutes=120):
+        """
+        Verifică dacă se poate încerca o nouă resetare a parolei.
+        """
+        self.reset_attempts_if_necessary(interval_minutes)
+        return self.attempts < max_attempts    
+    
       
 class Tag(models.Model):
     STATUS = (
