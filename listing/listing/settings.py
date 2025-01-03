@@ -201,7 +201,7 @@ else:
     
 SUGGESTION_LIMIT = 3  
 
-SITE_NAME = 'Imobiliare.Casa'  
+
 
 LOGGING = {
     'version': 1,
@@ -221,3 +221,17 @@ LOGGING = {
     },
 }
 
+SITE_NAME = 'Imobiliare.Casa'  
+DEFAULT_FROM_EMAIL = "admin@imobiliare.casa"  # Adresa de email implicită pentru trimiterea emailurilor
+FRONTEND_URL = "https://imobiliare.casa"  # URL-ul frontend-ului
+
+# for testing
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# for email server
+#EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.example.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'user@example.com'
+EMAIL_HOST_PASSWORD = 'password'
