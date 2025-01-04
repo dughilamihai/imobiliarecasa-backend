@@ -9,6 +9,8 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
+from django.utils.html import format_html
+from django.urls import reverse
 
 from django.contrib.admin import SimpleListFilter
 
@@ -271,7 +273,37 @@ class PasswordResetAttemptAdmin(admin.ModelAdmin):
         except User.DoesNotExist:
             return "No user"
 
-    username.short_description = "Username"        
+    username.short_description = "Username" 
+    
+# Configurarea admin-ului pentru UserActivityLog
+@admin.register(UserActivityLog)
+class UserActivityLogAdmin(admin.ModelAdmin):
+    list_display = ('user_link', 'event_type', 'description', 'timestamp')  # Afișăm link-ul în loc de numele utilizatorului
+    list_filter = ('event_type', 'timestamp')
+    search_fields = ('user__username', 'description')  # Căutare după username-ul utilizatorului și descriere
+    ordering = ['-timestamp']  # Ordine descrescătoare pe timestamp
+
+    def user_link(self, obj):
+        # Creăm link-ul către pagina de detalii a utilizatorului
+        url = reverse('admin:api_user_change', args=[obj.user.id])  # api = numele aplicatiei
+        return format_html('<a href="{}">{}</a>', url, obj.user.username)
+
+    user_link.short_description = 'User'  # Titlul coloanei în admin
+
+# Configurarea admin-ului pentru ListingActivityLog
+@admin.register(ListingActivityLog)
+class ListingActivityLogAdmin(admin.ModelAdmin):
+    list_display = ('listing_link', 'get_event_type_display', 'description', 'timestamp')  # Afișăm link-ul în loc de titlu
+    list_filter = ('event_type', 'timestamp')
+    search_fields = ('listing__title', 'description')  # Căutare după titlul anunțului și descriere
+    ordering = ['-timestamp']  # Ordine descrescătoare pe timestamp
+
+    def listing_link(self, obj):
+        # Creăm link-ul către pagina de detalii a `Listing`
+        url = reverse('admin:api_listing_change', args=[obj.listing.id]) 
+        return format_html('<a href="{}">{}</a>', url, obj.listing.title)
+
+    listing_link.short_description = 'Listing'  # Titlul coloanei în admin   
         
 class ManagementCommandAdmin(admin.ModelAdmin):
     list_display = ['name', 'run_command']
