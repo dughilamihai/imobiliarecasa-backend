@@ -166,7 +166,16 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
-    )    
+    ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',  # Pentru utilizatori anonimi
+        'rest_framework.throttling.UserRateThrottle',  # Pentru utilizatori autentificați
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '5/min',  # Permite 5 cereri pe minut pentru utilizatori anonimi
+        'user': '1000/day',  # Permite 1000 de cereri pe zi pentru utilizatori autentificați
+    },
+    
 }
 
 SIMPLE_JWT = {
