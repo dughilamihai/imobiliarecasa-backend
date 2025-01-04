@@ -27,6 +27,8 @@ from .constants import FLOOR_CHOICES
 from django.core.validators import RegexValidator
 from django.core.validators import MaxValueValidator, MinValueValidator
 from decimal import Decimal
+
+from django.contrib.auth import get_user_model
 class County(models.Model):
     # Câmpuri de bază
     name = models.CharField(max_length=100, unique=True)
@@ -640,7 +642,8 @@ class Listing(models.Model):
             slug_base = slugify(f"{self.title} {self.county.name} {self.city.name} {user_hash}")
             self.slug = slug_base                         
                         
-        super(Listing, self).save(*args, **kwargs)  
+         # Apelul la save-ul efectiv al anunțului
+        super(Listing, self).save(*args, **kwargs) 
         
     # Metodă pentru gestionarea like-urilor
     def toggle_like(self, user):
@@ -713,6 +716,43 @@ class Suggestion(models.Model):
         user_name = self.user.username if self.user else 'Admin'
         return f"Suggestion for {listing_title} by {user_name}"   
     
+# Loguri pentru activitățile utilizatorilor
+class UserActivityLog(models.Model):
+    EVENT_TYPES = (
+        ('register', 'Înregistrare'),
+        ('delete', 'Ștergere cont'),
+        ('update', 'Actualizare profil'),
+    )
+    
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    event_type = models.CharField(max_length=20, choices=EVENT_TYPES)
+    description = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.user} - {self.get_event_type_display()} at {self.timestamp}'
+    
+    class Meta:
+        ordering = ['-timestamp']
+
+
+# Loguri pentru activitățile legate de anunțuri
+class ListingActivityLog(models.Model):
+    EVENT_TYPES = (
+        ('create', 'Creare anunț'),
+        ('update', 'Actualizare anunț'),
+        ('delete', 'Ștergere anunț'),
+    )
+
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+    event_type = models.CharField(max_length=20, choices=EVENT_TYPES)
+    description = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f'{self.listing.title} - {self.get_event_type_display()}'
+    class Meta:
+        ordering = ['-timestamp']    
 class ManagementCommand(models.Model):
     name = models.CharField(max_length=255)
 

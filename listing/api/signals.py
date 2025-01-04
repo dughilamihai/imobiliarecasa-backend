@@ -1,8 +1,10 @@
-from django.db.models.signals import pre_save, pre_delete, post_save
+from django.db.models.signals import pre_save, pre_delete, post_save, post_delete
 from django.dispatch import receiver
-from api.models import User, ImageHash, Listing
+from api.models import User, ImageHash, Listing, ListingActivityLog, UserActivityLog
 import os
 from PIL import Image
+from django.utils import timezone
+from django.contrib.auth import get_user_model
 
 @receiver(pre_save, sender=User)
 def delete_old_file_on_update(sender, instance, **kwargs):
@@ -75,3 +77,58 @@ def generate_or_update_thumbnail(sender, instance, created, **kwargs):
             instance.thumbnail.name = relative_thumbnail_path
             instance.save(update_fields=['thumbnail'])
 
+@receiver(post_save, sender=Listing)
+def log_listing_activity(sender, instance, created, **kwargs):
+    # Verificăm dacă logul nu a fost deja salvat
+    if not hasattr(instance, '_activity_logged'):
+        instance._activity_logged = True  # Setăm indicatorul pentru a preveni duplicarea
+
+        # Verificăm corect tipul evenimentului: 'create' pentru o instanță nouă, 'update' pentru una existentă
+        if created:
+            event_type = dict(ListingActivityLog.EVENT_TYPES).get('create')  # Obținem valoarea din tuple
+        else:
+            event_type = dict(ListingActivityLog.EVENT_TYPES).get('update')  # Obținem valoarea din tuple
+
+        # Crează un log de activitate pentru anunț
+        ListingActivityLog.objects.create(
+            listing=instance,
+            event_type=event_type,
+            description=f"Anunțul '{instance.title}' a fost {event_type}.",
+            timestamp=timezone.now()
+        )
+        
+# Signal pentru înregistrarea unui utilizator
+@receiver(post_save, sender=get_user_model())
+def log_user_activity(sender, instance, created, **kwargs):
+    if created:
+        # Creăm un log pentru înregistrarea unui utilizator nou
+        UserActivityLog.objects.create(
+            user=instance,
+            event_type='register',
+            description=f"Utilizatorul '{instance.username}' s-a înregistrat pe platformă.",
+            timestamp=timezone.now()
+        )
+# Nu are sens sa fac pentru delete deoarece cand se sterge un user / listing se sterge automat si logo-ul si nu il mai gaseste!!!
+# # Signal pentru ștergerea unui utilizator
+# @receiver(pre_delete, sender=get_user_model())
+# def log_user_deletion(sender, instance, **kwargs):
+#     # Creăm un log pentru ștergerea unui utilizator
+#     UserActivityLog.objects.create(
+#         user=instance,
+#         event_type='delete',
+#         description=f"Contul utilizatorului '{instance.username}' a fost șters.",
+#         timestamp=timezone.now()
+#     )
+            
+# @receiver(post_delete, sender=Listing)
+# def log_listing_delete_activity(sender, instance, **kwargs):
+#     if not hasattr(instance, '_activity_logged'):  # Verificăm dacă logul nu a fost deja salvat
+#         instance._activity_logged = True  # Setăm indicatorul pentru a preveni duplicarea
+
+#         # Log pentru ștergerea anunțului
+#         ListingActivityLog.objects.create(
+#             listing=instance,
+#             event_type='delete',
+#             description=f"Anunțul '{instance.title}' a fost șters.",
+#             timestamp=timezone.now()
+#         )        
