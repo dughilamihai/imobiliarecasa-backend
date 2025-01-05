@@ -14,11 +14,8 @@ from rest_framework import serializers
 from .models import *
 
 # for time operations
-from datetime import timedelta
-from django.utils.timezone import localtime
-
-# generating meta tags for listings
-from datetime import datetime
+from datetime import timedelta, datetime
+from django.utils.timezone import localtime, make_aware
 
 # for custom variables
 from django.conf import settings
@@ -253,7 +250,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             })        
 
         # Verifică dacă email-ul este confirmat
-        if not user.email_verified:
+        if not getattr(user, 'email_verified', False):  # Asigură-te că user are atributul `email_verified`
             raise AuthenticationFailed({
                 'detail': 'Contul nu este activ! Nu ați confirmat link-ul primit pe email.',
                 'code': 'email_not_verified'
@@ -261,7 +258,22 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         # Dacă utilizatorul este valid, continuă cu validarea de bază
         data = super().validate(attrs)
+        
+        # Generează tokenul și calculează timpul de expirare
+        access_token = self.get_token(self.user)
+        expiration_utc = datetime.utcnow() + timedelta(seconds=access_token.access_token.lifetime.total_seconds())
+        
+        # Convertește datetime-ul UTC într-un obiect "aware"
+        expiration_utc_aware = make_aware(expiration_utc)
+        
+        # Convertește timpul UTC la ora locală
+        expiration_local = localtime(expiration_utc_aware)
+        
+        # Adaugă timpul localizat în răspuns
+        data['expires_at'] = expiration_local.isoformat()
+        
         return data
+    
 
     def get_user(self, attrs):
         """

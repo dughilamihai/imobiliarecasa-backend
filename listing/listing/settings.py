@@ -130,7 +130,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Bucharest'
 
 USE_I18N = True
 
@@ -180,7 +180,7 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # Tokenul de acces va expira după 1 oră.
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=120),  # Tokenul de acces va expira după 2 ore.
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),    # Tokenul de refresh va fi valid pentru o zi.
     'ROTATE_REFRESH_TOKENS': False,                # Tokenurile de refresh nu vor fi rotite.
     'BLACKLIST_AFTER_ROTATION': False,             # Tokenurile de refresh vechi nu vor fi adăugate în blacklist (nu este relevant dacă rotația este dezactivată).
