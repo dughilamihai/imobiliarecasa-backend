@@ -35,7 +35,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'api.imobiliare.casa']
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -51,12 +50,14 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt', 
     'rest_framework_simplejwt.token_blacklist',  
     'django_bleach', # for cleaning htmlfile fields      
-    'django_filters', # for filtering fields         
+    'django_filters', # for filtering fields    
+    'corsheaders',       
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',       
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -210,8 +211,6 @@ else:
     
 SUGGESTION_LIMIT = 3  
 
-
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -244,3 +243,9 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'user@example.com'
 EMAIL_HOST_PASSWORD = 'password'
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:4200",
+    "https://imobiliare.casa",            
+    # Add other allowed origins as needed
+]
