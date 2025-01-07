@@ -40,6 +40,9 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.template.loader import get_template
 from django.urls import reverse
 
+# for throttling
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
+
 import logging
 from .models import *
 from .serializers import *
@@ -93,6 +96,7 @@ class CategoryDetailAV(APIView):
 # register user        
 class UserRegistrationAPIView(APIView):
     permission_classes = [AllowAny]  # Allow unauthenticated requests
+    throttle_classes = [AnonRateThrottle, UserRateThrottle]
       
     def post(self, request):
         serializer = UserSerializer(data=request.data)
@@ -299,8 +303,11 @@ def send_reset_email(email, user):
 
 class PasswordResetRequestView(APIView):
     permission_classes = [AllowAny]    
+    throttle_classes = [AnonRateThrottle, UserRateThrottle]
 
     def post(self, request, *args, **kwargs):
+        logger.info("Post method reached")
+        print("Post method reached")
         email = request.data.get("email", "").strip()
 
         if not email:
