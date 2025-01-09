@@ -1089,6 +1089,7 @@ class ListingDetailSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     tag = TagSimpleSerializer(read_only=True, many=True)
     user = UserInfoSerializer(read_only=True)  # Include datele despre utilizatorul care a adăugat anunțul    
+    phone_number = serializers.SerializerMethodField()
     
     class Meta:
         model = Listing
@@ -1122,12 +1123,23 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             'category_name',
             'tag',
             'user',
+            'phone_number', 
+            'suprafata_utila',             
         ]
+        
+    def get_phone_number(self, obj):
+        # Verifică dacă utilizatorul are un număr de telefon valid
+        if obj.user and obj.user.phone_number:
+            # Convertește PhoneNumber în string (folosind metoda .as_e164 pentru formatul internațional sau str())
+            return str(obj.user.phone_number)
+        return None
     
 
 class ListingMinimalSerializer(serializers.ModelSerializer):
     neighborhood_name = serializers.CharField(source='neighborhood.name', read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
+    phone_number = serializers.SerializerMethodField()
+    suprafata_utila = serializers.SerializerMethodField()
     
     class Meta:
         model = Listing
@@ -1142,7 +1154,21 @@ class ListingMinimalSerializer(serializers.ModelSerializer):
             'like_count',
             'neighborhood_name',
             'category_name',
+            'phone_number', 
+            'suprafata_utila', 
         ]
+        
+        
+    def get_phone_number(self, obj):
+        # Verifică dacă utilizatorul are un număr de telefon valid
+        if obj.user and obj.user.phone_number:
+            # Convertește PhoneNumber în string (folosind metoda .as_e164 pentru formatul internațional sau str())
+            return str(obj.user.phone_number)
+        return None
+    
+    def get_suprafata_utila(self, obj):
+        # Rotunjim la cel mai apropiat întreg dacă există o valoare
+        return round(obj.suprafata_utila) if obj.suprafata_utila is not None else None
  
 class ReportSerializer(serializers.ModelSerializer):
     listing = serializers.PrimaryKeyRelatedField(queryset=Listing.objects.all())

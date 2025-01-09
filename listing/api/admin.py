@@ -297,6 +297,12 @@ class ListingActivityLogAdmin(admin.ModelAdmin):
     list_filter = ('event_type', 'timestamp')
     search_fields = ('listing__title', 'description')  # Căutare după titlul anunțului și descriere
     ordering = ['-timestamp']  # Ordine descrescătoare pe timestamp
+    
+    # Filtrează doar anunțurile inactive
+    def get_queryset(self, request):
+        # Obține queryset-ul original
+        qs = super().get_queryset(request)
+        return qs.filter(listing__status=0)
 
     def listing_link(self, obj):
         # Creăm link-ul către pagina de detalii a `Listing`

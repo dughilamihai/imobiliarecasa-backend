@@ -549,9 +549,9 @@ class HomeListingAPIView(APIView):
         ).order_by('?')[:8]
 
         # Serializăm datele
-        latest_serializer = ListingMinimalSerializer(latest_listings, many=True)
-        liked_serializer = ListingMinimalSerializer(most_liked_listings, many=True)
-        random_serializer = ListingMinimalSerializer(random_listings, many=True)
+        latest_serializer = ListingMinimalSerializer(latest_listings, context={'request': request}, many=True)
+        liked_serializer = ListingMinimalSerializer(most_liked_listings, context={'request': request}, many=True)
+        random_serializer = ListingMinimalSerializer(random_listings, context={'request': request}, many=True)
 
         # Returnăm datele într-un răspuns structurat
         return Response({
