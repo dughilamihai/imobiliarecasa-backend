@@ -462,10 +462,10 @@ class Listing(models.Model):
         (1, 'EUR'),
     ]
     COMPARTIMENTARE_CHOICES = [
-        (0, 'Decomandat'),
-        (1, 'Semidecomandat'),
-        (2, 'Nedecomandat'),
-        (3, 'Circular'),
+        (0, 'decomandat'),
+        (1, 'semidecomandat'),
+        (2, 'nedecomandat'),
+        (3, 'circular'),
     ]
     ZONARE_CHOICES = [
         (0, 'intravilan'),
@@ -479,13 +479,13 @@ class Listing(models.Model):
         (5, '5+ Camere'),
     ]  
     STRUCTURA_CHOICES = [
-        (0, 'Caramida'),
-        (1, 'Beton'),
+        (0, 'caramida'),
+        (1, 'beton'),
         (2, 'BCA'),
-        (3, 'Placi'),
-        (4, 'Lemn'),
-        (5, 'Metal'),
-        (6, 'Altele'),
+        (3, 'placi'),
+        (4, 'lemn'),
+        (5, 'metal'),
+        (6, 'altele'),
     ]        
     
     # Câmpuri de bază

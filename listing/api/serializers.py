@@ -1140,6 +1140,8 @@ class ListingMinimalSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     phone_number = serializers.SerializerMethodField()
     suprafata_utila = serializers.SerializerMethodField()
+    floor_display = serializers.SerializerMethodField()
+    zonare_display = serializers.SerializerMethodField()
     
     class Meta:
         model = Listing
@@ -1155,7 +1157,9 @@ class ListingMinimalSerializer(serializers.ModelSerializer):
             'neighborhood_name',
             'category_name',
             'phone_number', 
-            'suprafata_utila', 
+            'suprafata_utila',
+            'zonare_display', 
+            'floor_display',
         ]
         
         
@@ -1169,6 +1173,12 @@ class ListingMinimalSerializer(serializers.ModelSerializer):
     def get_suprafata_utila(self, obj):
         # Rotunjim la cel mai apropiat întreg dacă există o valoare
         return round(obj.suprafata_utila) if obj.suprafata_utila is not None else None
+    
+    def get_floor_display(self, obj):
+        return obj.get_floor_display()
+    
+    def get_zonare_display(self, obj):
+        return obj.get_zonare_display()    
  
 class ReportSerializer(serializers.ModelSerializer):
     listing = serializers.PrimaryKeyRelatedField(queryset=Listing.objects.all())
