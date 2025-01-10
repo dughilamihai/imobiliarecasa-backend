@@ -6,6 +6,11 @@ from PIL import Image
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
+# for clear cache
+import os
+import shutil
+from django.conf import settings
+
 @receiver(pre_save, sender=User)
 def delete_old_file_on_update(sender, instance, **kwargs):
 
@@ -49,33 +54,39 @@ def delete_files_on_listing_delete(sender, instance, **kwargs):
             if image_hashes.exists():
                 image_hashes.delete()  # Șterge toate instanțele asociate cu listing_uuid
                 break  # Oprire buclă după ce am șters toate instanțele    
-
+            
 @receiver(post_save, sender=Listing)
-def generate_or_update_thumbnail(sender, instance, created, **kwargs):
+def generate_or_update_thumbnail_and_clear_cache(sender, instance, created, **kwargs):
+    # Generare thumbnail
     if instance.photo1:  # Asigură-te că există o imagine în photo1
-        # Calea completă a imaginii principale
         photo1_path = instance.photo1.path
 
-        # Directorul pentru thumbnail-uri
         media_root = os.path.dirname(photo1_path).rsplit('listings', 1)[0]  # Obține directorul 'media'
         thumbnail_dir = os.path.join(media_root, 'thumbs')
         os.makedirs(thumbnail_dir, exist_ok=True)
 
-        # Numele pentru thumbnail
         thumbnail_name = f"thumb_{os.path.basename(photo1_path)}"
         thumbnail_path = os.path.join(thumbnail_dir, thumbnail_name)
 
-        # Generăm thumbnail-ul dacă nu există deja sau dacă s-a schimbat imaginea
         if not os.path.exists(thumbnail_path) or instance.thumbnail.name != os.path.join('thumbs', thumbnail_name):
             with Image.open(photo1_path) as img:
-                img.thumbnail((300, 240))  # Dimensiunile pentru thumbnail
+                img.thumbnail((300, 240))
                 img.save(thumbnail_path, "WEBP", quality=80)
 
-        # Actualizăm câmpul thumbnail cu calea relativă
-        relative_thumbnail_path = os.path.join('thumbs', thumbnail_name)  # Director relativ
+        relative_thumbnail_path = os.path.join('thumbs', thumbnail_name)
         if instance.thumbnail.name != relative_thumbnail_path:
             instance.thumbnail.name = relative_thumbnail_path
             instance.save(update_fields=['thumbnail'])
+    
+    # Curățare cache dacă statusul este activ
+    if instance.status == 1:  # 1 = Active
+        cache_dir = settings.CACHES['default']['LOCATION']
+        if os.path.exists(cache_dir):
+            shutil.rmtree(cache_dir)
+            os.makedirs(cache_dir)
+        else:
+            print(f'Cache directory {cache_dir} does not exist.')
+                       
 
 @receiver(post_save, sender=Listing)
 def log_listing_activity(sender, instance, created, **kwargs):

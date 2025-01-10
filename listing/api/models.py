@@ -674,7 +674,7 @@ class Listing(models.Model):
 class ImageHash(models.Model):
     hash_value = models.CharField(max_length=64, unique=True)
     listing_uuid = models.UUIDField(null=True, blank=True)  # Folosind UUID-ul pentru asocierea cu listing
-    photo_name = models.CharField(max_length=20, null=True, blank=True)     
+    photo_name = models.CharField(max_length=100, null=True, blank=True)     
     created_at = models.DateTimeField(auto_now_add=True)         
         
 class Report(models.Model):

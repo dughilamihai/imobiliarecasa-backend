@@ -685,7 +685,6 @@ class ListingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(f"Anul construcției nu poate fi mai mare decât anul curent ({anul_curent}).")
         
         return value    
-    
     def create(self, validated_data):
         tag_ids = validated_data.pop('tag_ids', [])  # Extragem tag_ids din datele validate 
 
@@ -699,23 +698,28 @@ class ListingSerializer(serializers.ModelSerializer):
 
         # După crearea instanței, accesează uuid
         uuid_value = instance.id  # Accesează uuid-ul
-        
-        # Generare hash pentru câmpurile foto și salvarea în ImageHash
+
+        # Trunchiem numelui fișierului pentru câmpurile foto din Listing, ImageHash
+        max_length = 80  # Dimensiunea maximă a câmpului photo_name în DB
         for i in range(1, 10):
             photo_field = validated_data.get(f"photo{i}")
             if photo_field:
+                
+                # Trunchiem numele fișierului pentru a evita eroarea de lungime
+                truncated_photo_name = photo_field.name[:max_length]  # Trunchiem la 80 caractere
+                
                 # Generează hash-ul pentru imaginea curentă
-                hash_value = generate_hash(photo_field)  # Funcția care generează hash-ul            
+                hash_value = generate_hash(photo_field)  # Funcția care generează hash-ul
 
-            # Verificăm dacă hash-ul există deja în ImageHash
-            if not ImageHash.objects.filter(hash_value=hash_value).exists():
-                # Crează un obiect ImageHash și salvează-l
-                ImageHash.objects.create(
-                    listing_uuid = uuid_value,  # Accesează uuid-ul
-                    photo_name=photo_field.name,
-                    hash_value=hash_value,
-                )  
-        
+                # Verificăm dacă hash-ul există deja în ImageHash
+                if not ImageHash.objects.filter(hash_value=hash_value).exists():
+                    # Crează un obiect ImageHash și salvează-l
+                    ImageHash.objects.create(
+                        listing_uuid=uuid_value,  # Accesează uuid-ul
+                        photo_name=truncated_photo_name,  # Salvăm numele trunchiat
+                        hash_value=hash_value,
+                    )  
+
         # Legăm tag-urile la Listing dacă există ID-uri
         if tag_ids:
             tags = Tag.objects.filter(id__in=tag_ids)  # Obținem tag-urile din DB
@@ -776,6 +780,7 @@ class ListingSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+   
     
 class ListingUpdateSerializer(serializers.ModelSerializer):
     county_id = serializers.IntegerField(write_only=True, required=False)
@@ -993,9 +998,14 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
         ImageHash.objects.filter(listing_uuid=instance.id).delete()
 
         # Verificare și generare hash pentru noile imagini
+        # Trunchiem numelui fișierului pentru câmpurile foto din Listing, ImageHash
+        max_length = 80  # Dimensiunea maximă a câmpului photo_name în DB
         for i in range(1, 10):
             photo_field = validated_data.get(f"photo{i}")
             if photo_field:
+                # Trunchiem numele fișierului pentru a evita eroarea de lungime
+                truncated_photo_name = photo_field.name[:max_length]  # Trunchiem la 80 caractere
+                
                 hash_value = generate_hash(photo_field)
 
                 # Verificăm dacă hash-ul există deja în ImageHash
@@ -1007,7 +1017,7 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
                     # Dacă hash-ul nu există, îl adăugăm în tabela ImageHash
                     ImageHash.objects.create(
                     listing_uuid = instance.id,  # Accesează uuid-ul
-                    photo_name=photo_field.name,
+                    photo_name=truncated_photo_name,  # Salvăm numele trunchiat
                     hash_value=hash_value,
                 )  
         
