@@ -515,8 +515,7 @@ class Listing(models.Model):
             MinValueValidator(Decimal('0.00')),
             MaxValueValidator(Decimal('50.00'))  # Maxim 50.00%
         ],
-        null=True,
-        blank=True,
+        default=Decimal('0.00'),  # Valoare implicită 0.00
         help_text="Introduceți procentul comisionului pentru cumpărător (maxim 50%)."
     )
     

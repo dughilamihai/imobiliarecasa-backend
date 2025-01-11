@@ -541,6 +541,12 @@ class HomeListingAPIView(APIView):
             status=1,
             valability_end_date__gte=now().date()
         ).order_by('-like_count')[:8]
+        
+        # Obține cele 8 cele mai vizualizate anunțuri
+        most_viewed_listings = Listing.objects.filter(
+            status=1,
+            valability_end_date__gte=now().date()
+        ).order_by('-views_count')[:8]        
 
         # Obține 8 anunțuri random
         random_listings = Listing.objects.filter(
@@ -551,12 +557,14 @@ class HomeListingAPIView(APIView):
         # Serializăm datele
         latest_serializer = ListingMinimalSerializer(latest_listings, context={'request': request}, many=True)
         liked_serializer = ListingMinimalSerializer(most_liked_listings, context={'request': request}, many=True)
+        most_viewed = ListingMinimalSerializer(most_viewed_listings, context={'request': request}, many=True)        
         random_serializer = ListingMinimalSerializer(random_listings, context={'request': request}, many=True)
 
         # Returnăm datele într-un răspuns structurat
         return Response({
             'latest': latest_serializer.data,      # Datele pentru cele mai noi anunțuri
             'most_liked': liked_serializer.data,   # Datele pentru cele mai apreciate anunțuri
+            'most_viewed': most_viewed.data,       # Datele pentru cele mai vizualizate anunțuri            
             'random': random_serializer.data,      # Datele pentru anunțuri random
         }, status=status.HTTP_200_OK)
     

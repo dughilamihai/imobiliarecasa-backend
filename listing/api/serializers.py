@@ -1170,6 +1170,7 @@ class ListingMinimalSerializer(serializers.ModelSerializer):
             'suprafata_utila',
             'zonare_display', 
             'floor_display',
+            'buyer_commission',
         ]
         
         
