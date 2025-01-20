@@ -44,6 +44,18 @@ class CategorySerializer(serializers.ModelSerializer):
             return {"id": obj.parent.id, "name": obj.parent.name, "slug": obj.parent.slug}
         return None
     
+class NestedCategorySerializer(serializers.ModelSerializer):
+    children = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'slug', 'meta_title', 'meta_description', 'custom_text', 'parent', 'children']
+
+    def get_children(self, obj):
+        # Obține subcategoriile pentru fiecare categorie părinte
+        children = Category.objects.filter(parent=obj)
+        return NestedCategorySerializer(children, many=True).data    
+    
 # for user
 class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()

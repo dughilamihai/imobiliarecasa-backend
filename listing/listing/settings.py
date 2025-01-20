@@ -207,7 +207,7 @@ BLEACH_STRIP_TAGS = True
 if DEBUG:
     PAGE_SIZE = 8
 else:
-    PAGE_SIZE = 32
+    PAGE_SIZE = 20
     
 SUGGESTION_LIMIT = 3  
 

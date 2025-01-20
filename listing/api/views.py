@@ -17,6 +17,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 # for filtering
 from django_filters import rest_framework as filters
+from django_filters import OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from .constants import FLOOR_CHOICES
 
@@ -68,8 +69,11 @@ class CategoryListAllAV(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        categories = Category.objects.all()
-        serializer = CategorySerializer(categories, many=True)
+        # Obține toate categoriile care nu sunt incluse ca subcategorii
+        categories = Category.objects.filter(parent__isnull=True)
+        
+        # Serializare cu includerea relației parent-children
+        serializer = NestedCategorySerializer(categories, many=True)
         return Response(serializer.data)
 
 class CategoryListAV(APIView):
@@ -476,9 +480,12 @@ class ListingFilter(filters.FilterSet):
     suprafata_utila_max = filters.NumberFilter(field_name="suprafata_utila", lookup_expr="lte", label="Suprafață utilă maximă")      
     
     # Filtrul pentru etaj
-    floor = filters.ChoiceFilter(field_name="floor", choices=FLOOR_CHOICES)      
-
-
+    floor = filters.ChoiceFilter(field_name="floor", choices=FLOOR_CHOICES)
+    
+    # Filtrul pentru ordonare    
+    ordering = OrderingFilter(
+    fields=['created_date', 'like_count', 'views_count']
+)
     class Meta:
         model = Listing
         fields = [
@@ -486,7 +493,7 @@ class ListingFilter(filters.FilterSet):
             'year_of_construction_min', 'year_of_construction_max', 
             'username_hash', 'suprafata_utila_min', 'suprafata_utila_max', 'floor'
         ]
-        
+
 class ListingAPIView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend]
@@ -494,26 +501,31 @@ class ListingAPIView(APIView):
     pagination_class = ListingPagination
 
     def get(self, request):
-      # Filtrare de bază
+        # Filtrare de bază
         queryset = Listing.objects.filter(
             status=1,
             valability_end_date__gte=now().date(),
             is_active_by_user=True  # Exclude anunțurile inactive by user
-        ).order_by('-created_date')
-        
-       # Aplică filtrarea definită, dar dacă nu este validă, continuă fără erori
-        filterset = self.filterset_class(request.GET, queryset=queryset)
+        )
 
+        # Aplicare filtre
+        filterset = self.filterset_class(request.GET, queryset=queryset)
         if filterset.is_valid():
-            queryset = filterset.qs  # Aplică filtrarea definită dacă este validă  
-        
-        # Aplicare paginare directă
+            queryset = filterset.qs  # Aplică filtrarea definită dacă este validă
+
+        # Aplicare ordonare
+        ordering = request.GET.get('ordering')  # Preia parametru 'ordering' din query string
+        if ordering:
+            queryset = queryset.order_by(ordering)  # Aplică criteriul de ordonare
+
+        # Aplicare paginare
         paginator = self.pagination_class()
         paginated_queryset = paginator.paginate_queryset(queryset, request)
 
         # Serializare
-        serializer = ListingMinimalSerializer(paginated_queryset, many=True)
+        serializer = ListingMinimalSerializer(paginated_queryset, context={'request': request}, many=True)
         return paginator.get_paginated_response(serializer.data)
+
     
     def post(self, request):
         """
