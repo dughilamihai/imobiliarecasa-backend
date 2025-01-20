@@ -469,7 +469,7 @@ class ListingPagination(PageNumberPagination):
 class ListingFilter(filters.FilterSet):
     price_min = filters.NumberFilter(field_name="price", lookup_expr="gte")
     price_max = filters.NumberFilter(field_name="price", lookup_expr="lte")
-    category = filters.CharFilter(field_name="category", lookup_expr="exact")
+    category = filters.NumberFilter(field_name="category_id", lookup_expr="exact")
     city_id = filters.NumberFilter(field_name="city__id", lookup_expr="exact")
     year_of_construction_min = filters.NumberFilter(field_name='year_of_construction', lookup_expr='gte', label='An minim Construcție')
     year_of_construction_max = filters.NumberFilter(field_name='year_of_construction', lookup_expr='lte', label='An maxim Construcție') 
