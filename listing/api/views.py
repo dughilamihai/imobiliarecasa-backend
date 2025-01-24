@@ -95,7 +95,27 @@ class CategoryDetailAV(APIView):
             return Response(serializer.data, status=200)
         except Category.DoesNotExist:
             return Response({"detail": "Categoria nu a fost găsită."}, status=404)
+ 
+class CountyListAV(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        counties = County.objects.all()
+        serializer = CountySerializer(counties, many=True)
+        return Response(serializer.data)    
     
+class CountyDetailAV(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, slug=None, *args, **kwargs):
+        try:
+            # Obține județul pe baza slug-ului
+            county = County.objects.get(slug=slug)
+            serializer = CountySerializer(county)
+            return Response(serializer.data, status=200)
+        except County.DoesNotExist:
+            # Răspuns personalizat pentru 404
+            return Response({"detail": "Județul nu a fost găsit."}, status=404)   
     
 # register user        
 class UserRegistrationAPIView(APIView):
@@ -470,6 +490,7 @@ class ListingFilter(filters.FilterSet):
     price_min = filters.NumberFilter(field_name="price", lookup_expr="gte")
     price_max = filters.NumberFilter(field_name="price", lookup_expr="lte")
     category = filters.NumberFilter(field_name="category_id", lookup_expr="exact")
+    county = filters.NumberFilter(field_name="county__id", lookup_expr="exact")    
     city_id = filters.NumberFilter(field_name="city__id", lookup_expr="exact")
     year_of_construction_min = filters.NumberFilter(field_name='year_of_construction', lookup_expr='gte', label='An minim Construcție')
     year_of_construction_max = filters.NumberFilter(field_name='year_of_construction', lookup_expr='lte', label='An maxim Construcție') 
@@ -489,7 +510,7 @@ class ListingFilter(filters.FilterSet):
     class Meta:
         model = Listing
         fields = [
-            'category', 'price_min', 'price_max', 'city__id', 
+            'category', 'price_min', 'price_max', 'city__id', 'county__id',
             'year_of_construction_min', 'year_of_construction_max', 
             'username_hash', 'suprafata_utila_min', 'suprafata_utila_max', 'floor'
         ]

@@ -54,7 +54,12 @@ class NestedCategorySerializer(serializers.ModelSerializer):
     def get_children(self, obj):
         # Obține subcategoriile pentru fiecare categorie părinte
         children = Category.objects.filter(parent=obj)
-        return NestedCategorySerializer(children, many=True).data    
+        return NestedCategorySerializer(children, many=True).data  
+    
+class CountySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = County
+        exclude = ['date_created']    
     
 # for user
 class UserSerializer(serializers.ModelSerializer):
