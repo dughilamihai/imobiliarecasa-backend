@@ -116,6 +116,38 @@ class CountyDetailAV(APIView):
         except County.DoesNotExist:
             # Răspuns personalizat pentru 404
             return Response({"detail": "Județul nu a fost găsit."}, status=404)   
+        
+class CityListByCountyAV(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, slug):
+        try:
+            # Găsește județul după slug
+            county = County.objects.get(slug=slug)
+            
+            # Obține toate localitățile asociate cu județul
+            cities = county.cities.all()
+
+            # Serializare date
+            serializer = CitySerializer(cities, many=True)
+            return Response(serializer.data)
+        except County.DoesNotExist:
+            return Response({"detail": "Orașul nu a fost găsit."}, status=404)   
+
+class CityDetailAV(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, city_slug=None, county_slug=None, *args, **kwargs):
+        try:
+            # Obține orașul pe baza slug-urilor
+            city = City.objects.get(slug=city_slug, county__slug=county_slug)
+            serializer = CitySerializer(city)
+            return Response(serializer.data, status=200)
+        except City.DoesNotExist:
+            # Răspuns personalizat pentru 404
+            return Response({"detail": "Orașul nu a fost găsit."}, status=404)
+
+          
     
 # register user        
 class UserRegistrationAPIView(APIView):
@@ -491,7 +523,7 @@ class ListingFilter(filters.FilterSet):
     price_max = filters.NumberFilter(field_name="price", lookup_expr="lte")
     category = filters.NumberFilter(field_name="category_id", lookup_expr="exact")
     county = filters.NumberFilter(field_name="county__id", lookup_expr="exact")    
-    city_id = filters.NumberFilter(field_name="city__id", lookup_expr="exact")
+    city = filters.NumberFilter(field_name="city__id", lookup_expr="exact")
     year_of_construction_min = filters.NumberFilter(field_name='year_of_construction', lookup_expr='gte', label='An minim Construcție')
     year_of_construction_max = filters.NumberFilter(field_name='year_of_construction', lookup_expr='lte', label='An maxim Construcție') 
     username_hash = filters.CharFilter(field_name="user__username_hash", lookup_expr="exact")   

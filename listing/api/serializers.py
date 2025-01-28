@@ -60,6 +60,11 @@ class CountySerializer(serializers.ModelSerializer):
     class Meta:
         model = County
         exclude = ['date_created']    
+        
+class CitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = City
+        exclude = ['date_created']  # Exclude câmpul date_created        
     
 # for user
 class UserSerializer(serializers.ModelSerializer):
