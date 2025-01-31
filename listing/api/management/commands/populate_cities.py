@@ -63,10 +63,10 @@ class Command(BaseCommand):
             for oras_nume in orase:
                 # Generare slug și câmpuri SEO
                 slug = slugify(oras_nume)
-                meta_title = f"Imobiliare {oras_nume}, {judet_nume} - Anunțuri Gratuite"
+                meta_title = f"Imobiliare {oras_nume}, {judet_nume} - Anunturi Gratuite ✅ Terenuri, Apartamente, Vanzari, Inchirieri"
                 meta_description = (
                     f"Anunțuri imobiliare în {oras_nume}, {judet_nume}: apartamente, case, terenuri și spații comerciale "
-                    f"de vânzare și închiriere. Găsește oferte actualizate din {oras_nume}."
+                    f"de vânzare și închiriere. Adaugă anunt gratuit! Găsește oferte actualizate"
                 )
                 description = (
                     f"Explorează anunțurile imobiliare din {oras_nume}, {judet_nume}. Descoperă proprietăți variate "

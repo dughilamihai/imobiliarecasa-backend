@@ -17,8 +17,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         for judet in judete:
             slug = slugify(judet)
-            meta_title = f"Imobiliare {judet} - Anunțuri Gratuite"
-            meta_description = f"Anunțuri imobiliare în {judet}: apartamente, case, terenuri și spații comerciale de vânzare și închiriere. Găsește oferte imobiliare actualizate din {judet}."
+            meta_title = f"Imobiliare {judet} - Anunturi Gratuite ✅ Terenuri, Apartamente, Vanzari, Inchirieri"
+            meta_description = f"Anunțuri imobiliare în {judet}: apartamente, case, terenuri și spații comerciale de vânzare și închiriere. Adaugă anunt gratuit! Găsește oferte imobiliare actualizate"
             description = (
                 f"Explorează ofertele imobiliare din {judet}. Descoperă apartamente, case, terenuri și spații comerciale "
                 f"de vânzare și închiriere în {judet}. Verifică cele mai recente anunțuri imobiliare și alege "
