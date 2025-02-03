@@ -585,6 +585,7 @@ class promotedListingWidgetAPIView(APIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = ListingFilter
 
+    @method_decorator(cache_page(CACHE_TIMEOUT))
     def get(self, request):
         # Filtrare de bază
         queryset = Listing.objects.filter(
