@@ -527,6 +527,7 @@ class ListingFilter(filters.FilterSet):
     year_of_construction_min = filters.NumberFilter(field_name='year_of_construction', lookup_expr='gte', label='An minim Construcție')
     year_of_construction_max = filters.NumberFilter(field_name='year_of_construction', lookup_expr='lte', label='An maxim Construcție') 
     username_hash = filters.CharFilter(field_name="user__username_hash", lookup_expr="exact")   
+    is_promoted = filters.BooleanFilter(field_name="is_promoted", lookup_expr="exact", label="Anunț promovat")
     
     # Filtre pentru suprafață utilă
     suprafata_utila_min = filters.NumberFilter(field_name="suprafata_utila", lookup_expr="gte", label="Suprafață utilă minimă")
@@ -544,7 +545,7 @@ class ListingFilter(filters.FilterSet):
         fields = [
             'category', 'price_min', 'price_max', 'city__id', 'county__id',
             'year_of_construction_min', 'year_of_construction_max', 
-            'username_hash', 'suprafata_utila_min', 'suprafata_utila_max', 'floor'
+            'username_hash', 'suprafata_utila_min', 'suprafata_utila_max', 'floor', 'is_promoted'
         ]
 
 class ListingAPIView(APIView):
@@ -579,16 +580,27 @@ class ListingAPIView(APIView):
         serializer = ListingMinimalSerializer(paginated_queryset, context={'request': request}, many=True)
         return paginator.get_paginated_response(serializer.data)
 
-    
-    def post(self, request):
-        """
-        Creare Listing nou.
-        """
-        serializer = ListingSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save(user=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  
+class promotedListingWidgetAPIView(APIView):
+    permission_classes = [AllowAny]   
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ListingFilter
+
+    def get(self, request):
+        # Filtrare de bază
+        queryset = Listing.objects.filter(
+            status=1,
+            is_promoted=True,
+            valability_end_date__gte=now().date(),
+            is_active_by_user=True  # Exclude anunțurile inactive by user
+        )
+
+        # Aplicare filtre
+        filterset = self.filterset_class(request.GET, queryset=queryset)
+        if filterset.is_valid():
+            queryset = filterset.qs  # Aplică filtrarea definită dacă este validă
+
+        serializer = ListingMinimalSerializer(queryset, context={'request': request}, many=True)
+        return Response(serializer.data)
            
 class HomeListingAPIView(APIView):
     permission_classes = [AllowAny]    
@@ -600,6 +612,14 @@ class HomeListingAPIView(APIView):
             status=1,
             valability_end_date__gte=now().date()
         ).order_by('-created_date')[:8]
+        
+        # Obține cele 8 cele mai noi anunțuri promovate
+        promoted_listings = Listing.objects.filter(
+            status=1,
+            is_promoted=True,
+            valability_end_date__gte=now().date()
+        ).order_by('-created_date')[:8]
+                
 
         # Obține cele 8 cele mai apreciate anunțuri
         most_liked_listings = Listing.objects.filter(
@@ -621,16 +641,18 @@ class HomeListingAPIView(APIView):
 
         # Serializăm datele
         latest_serializer = ListingMinimalSerializer(latest_listings, context={'request': request}, many=True)
+        promoted_serializer = ListingMinimalSerializer(promoted_listings, context={'request': request}, many=True)        
         liked_serializer = ListingMinimalSerializer(most_liked_listings, context={'request': request}, many=True)
         most_viewed = ListingMinimalSerializer(most_viewed_listings, context={'request': request}, many=True)        
         random_serializer = ListingMinimalSerializer(random_listings, context={'request': request}, many=True)
 
         # Returnăm datele într-un răspuns structurat
         return Response({
-            'latest': latest_serializer.data,      # Datele pentru cele mai noi anunțuri
-            'most_liked': liked_serializer.data,   # Datele pentru cele mai apreciate anunțuri
-            'most_viewed': most_viewed.data,       # Datele pentru cele mai vizualizate anunțuri            
-            'random': random_serializer.data,      # Datele pentru anunțuri random
+            'latest': latest_serializer.data,      # Cele mai noi anunțuri
+            'promoted': promoted_serializer.data,  # Anunțuri promovate
+            'most_liked': liked_serializer.data,   # Cele mai apreciate anunțuri
+            'most_viewed': most_viewed.data,       # Cele mai vizualizate anunțuri            
+            'random': random_serializer.data,      # Anunțuri random
         }, status=status.HTTP_200_OK)
     
 # Clasă pentru vizualizare detaliată
@@ -742,6 +764,53 @@ class LikedListingsAPIView(APIView):
         return paginator.get_paginated_response(serializer.data)
     
     
+class PromoteListingView(APIView):
+    permission_classes = [IsAuthenticated]  # Doar utilizatorii autentificați pot promova anunțuri
+
+    def post(self, request):
+        user = request.user
+        listing_id = request.data.get("id")
+        valability_promote_date = request.data.get("valability_promote_date")
+
+        if not listing_id or not valability_promote_date:
+            return Response({"error": "ID-ul anunțului și data promovării sunt necesare."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            listing = Listing.objects.get(id=listing_id, user=user)  # Verifică dacă utilizatorul deține anunțul
+        except Listing.DoesNotExist:
+            return Response({"error": "Anunțul nu există sau nu îți aparține."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Verifică dacă anunțul este aprobat (status=1)
+        if listing.status != 1:
+            return Response({"error": "Nu poți promova un anunț care nu a fost aprobat de administrator."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Convertim `valability_promote_date` la obiect `date`
+        try:
+            valability_promote_date = serializers.DateField().to_internal_value(valability_promote_date)
+        except:
+            return Response({"error": "Formatul datei nu este valid. Folosește YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
+        today = now().date()
+        
+        # Verifică dacă anunțul este deja promovat și perioada de promovare nu a expirat
+        if listing.is_promoted and listing.valability_promote_date and listing.valability_promote_date >= today:
+            return Response({"error": "Anunțul este deja promovat. Poți promova din nou după expirarea promovării."}, status=status.HTTP_400_BAD_REQUEST)        
+
+        # Verifică dacă `valability_promote_date` este în viitor
+        if valability_promote_date < today:
+            return Response({"error": "Data de promovare nu poate fi în trecut."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verifică dacă `valability_promote_date` este înainte de `valability_end_date`
+        if valability_promote_date >= listing.valability_end_date:
+            return Response({"error": "Data de promovare trebuie să fie înainte de data de valabilitate."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Actualizează anunțul ca promovat
+        listing.is_promoted = True
+        listing.valability_promote_date = valability_promote_date
+        listing.save()
+
+        return Response({"success": "Anunțul a fost promovat cu succes."}, status=status.HTTP_200_OK)
+        
 class ToggleLikeAPIView(APIView):
     permission_classes = [IsAuthenticated]
 

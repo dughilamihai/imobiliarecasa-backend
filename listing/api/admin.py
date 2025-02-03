@@ -46,9 +46,6 @@ class NeighborhoodAdmin(admin.ModelAdmin):
     list_filter = ('city',)
     prepopulated_fields = {"slug": ("name",)}    
 
-from django.contrib import admin
-from .models import Category
-
 # Filtru personalizat pentru câmpul group
 class GroupFilter(admin.SimpleListFilter):
     title = 'Grup'  # Nume afișat în interfață
@@ -188,8 +185,8 @@ class LikeAdmin(admin.ModelAdmin):
 @admin.register(Listing)
 class ListingAdmin(admin.ModelAdmin):
     # Afișează UUID-ul, alături de alte câmpuri
-    list_display = ('id', 'title', 'status', 'county', 'city', 'neighborhood', 'category__name', 'expired', 'username', 'thumbnail_preview')  # Afișează UUID-ul
-    list_filter = ('city', 'county', 'tag__name', 'category__name')  # Permite filtrarea după city, county și tags
+    list_display = ('id', 'title', 'status', 'county', 'city', 'neighborhood', 'category__name', 'expired', 'username', 'is_promoted', 'thumbnail_preview')  # Afișează UUID-ul
+    list_filter = ('is_promoted', 'city', 'county', 'tag__name', 'category__name')  # Permite filtrarea după city, county și tags
     search_fields = ('title', 'county__name', 'city__name', 'id')  # Permite căutarea după UUID (id)
     filter_horizontal = ('tag',)  # Permite selecția etichetelor într-un mod intuitiv    
 

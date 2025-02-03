@@ -577,6 +577,14 @@ class Listing(models.Model):
     # Locație
     latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
+    
+    # Câmp pentru promovare
+    is_promoted = models.BooleanField(default=False, help_text="Indică dacă anunțul este promovat.")
+    valability_promote_date = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Data până la care anunțul este promovat."
+    )    
 
     # Date și statistici
     created_date = models.DateTimeField(auto_now_add=True)
