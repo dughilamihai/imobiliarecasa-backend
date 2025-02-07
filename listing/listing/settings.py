@@ -233,6 +233,11 @@ SITE_NAME = 'Imobiliare.Casa'
 DEFAULT_FROM_EMAIL = "admin@imobiliare.casa"  # Adresa de email implicită pentru trimiterea emailurilor
 FRONTEND_URL = "https://imobiliare.casa"  # URL-ul frontend-ului
 
+# for promoting listings
+PROMOTION_PRICE_PER_DAY_EX_VAT = 1  # Preț per zi fără TVA
+VAT_RATE = 19.00  # TVA în România
+MAX_PROMOTION_DAYS = 360  # Limită de 1 an pentru promovarea unui anunț
+
 # for testing
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 

@@ -585,7 +585,7 @@ class promotedListingWidgetAPIView(APIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = ListingFilter
 
-    @method_decorator(cache_page(CACHE_TIMEOUT))
+    # @method_decorator(cache_page(CACHE_TIMEOUT))
     def get(self, request):
         # Filtrare de bază
         queryset = Listing.objects.filter(
@@ -599,8 +599,11 @@ class promotedListingWidgetAPIView(APIView):
         filterset = self.filterset_class(request.GET, queryset=queryset)
         if filterset.is_valid():
             queryset = filterset.qs  # Aplică filtrarea definită dacă este validă
+            
+        # Selectarea aleatorie a 4 anunțuri promovate
+        promoted_listings = queryset.order_by('?')[:4]
 
-        serializer = ListingMinimalSerializer(queryset, context={'request': request}, many=True)
+        serializer = ListingMinimalSerializer(promoted_listings, context={'request': request}, many=True)
         return Response(serializer.data)
            
 class HomeListingAPIView(APIView):
@@ -763,54 +766,134 @@ class LikedListingsAPIView(APIView):
         # Serializare
         serializer = ListingMinimalSerializer(paginated_queryset, many=True)
         return paginator.get_paginated_response(serializer.data)
-    
-    
+
 class PromoteListingView(APIView):
-    permission_classes = [IsAuthenticated]  # Doar utilizatorii autentificați pot promova anunțuri
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         user = request.user
         listing_id = request.data.get("id")
-        valability_promote_date = request.data.get("valability_promote_date")
+        days = request.data.get("days")  # Numărul de zile pentru promovare
 
-        if not listing_id or not valability_promote_date:
-            return Response({"error": "ID-ul anunțului și data promovării sunt necesare."}, status=status.HTTP_400_BAD_REQUEST)
+        if not listing_id or not days:
+            return Response({"error": "ID-ul anunțului și numărul de zile sunt necesare."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Convertim în întreg și verificăm limita
+        try:
+            days = int(days)
+            if days <= 0 or days > settings.MAX_PROMOTION_DAYS:
+                return Response({"error": f"Numărul maxim de zile permise este {settings.MAX_PROMOTION_DAYS}."}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError:
+            return Response({"error": "Numărul de zile trebuie să fie un număr valid."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            listing = Listing.objects.get(id=listing_id, user=user)  # Verifică dacă utilizatorul deține anunțul
+            listing = Listing.objects.get(id=listing_id, user=user)
         except Listing.DoesNotExist:
             return Response({"error": "Anunțul nu există sau nu îți aparține."}, status=status.HTTP_403_FORBIDDEN)
 
-        # Verifică dacă anunțul este aprobat (status=1)
         if listing.status != 1:
             return Response({"error": "Nu poți promova un anunț care nu a fost aprobat de administrator."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Convertim `valability_promote_date` la obiect `date`
-        try:
-            valability_promote_date = serializers.DateField().to_internal_value(valability_promote_date)
-        except:
-            return Response({"error": "Formatul datei nu este valid. Folosește YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+        # ✅ Verificăm dacă anunțul este deja promovat
+        if listing.is_promoted and listing.valability_promote_date and listing.valability_promote_date > now().date():
+            return Response({
+                "error": f"Anunțul este deja promovat până pe {listing.valability_promote_date}. Trebuie să aștepți expirarea promovării."
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         today = now().date()
+        new_promote_date = (datetime.combine(today, datetime.min.time()) + timedelta(days=int(days))).replace(hour=23, minute=59, second=59)
+
+        # Preluăm valorile din settings.py
+        price_per_day_ex_vat = getattr(settings, "PROMOTION_PRICE_PER_DAY_EX_VAT", 5)
+        vat_rate = getattr(settings, "VAT_RATE", 19.00)
+
+        # Calculăm costurile
+        amount_without_vat = price_per_day_ex_vat * int(days)
+        vat_amount = (amount_without_vat * vat_rate) / 100
+        amount_with_vat = amount_without_vat + vat_amount
+
+        # Creăm un obiect Payment
+        payment = Payment.objects.create(
+            user=user,
+            listing=listing,
+            amount_without_vat=amount_without_vat,
+            vat_amount=vat_amount,
+            amount_with_vat=amount_with_vat,
+            promoted_days=int(days),            
+            currency="RON",
+            status="pending"
+        )
+
+        return Response({
+            "success": "Plata inițiată.",
+            "payment_id": payment.id,
+            "amount_without_vat": float(amount_without_vat),
+            "vat_amount": float(vat_amount),
+            "amount_with_vat": float(amount_with_vat),
+            "new_valability_date": new_promote_date  # Doar informativ, nu se salvează încă
+        }, status=status.HTTP_200_OK)
+
+
+class ConfirmPaymentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        payment_id = request.data.get("payment_id")
+        # external_payment_id = request.data.get("external_payment_id")  # ID-ul de la procesatorul de plăți
+        external_payment_id = 272727  # ID-ul simulat de la procesatorul de plăți
+        verification_code = request.data.get("verification_code")  # Codul introdus de utilizator
+
+        try:
+            payment = Payment.objects.get(id=payment_id, user=request.user)
+        except Payment.DoesNotExist:
+            return Response({"error": "Plata nu există."}, status=status.HTTP_404_NOT_FOUND)
+
+        if payment.status == "paid":
+            return Response({"message": "Plata a fost deja confirmată."}, status=status.HTTP_200_OK)
+
+        # 📌 Simulare verificare cod random pentru confirmare
+        if not verification_code:
+            return Response({"error": "Codul de verificare este necesar."}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Verifică dacă anunțul este deja promovat și perioada de promovare nu a expirat
-        if listing.is_promoted and listing.valability_promote_date and listing.valability_promote_date >= today:
-            return Response({"error": "Anunțul este deja promovat. Poți promova din nou după expirarea promovării."}, status=status.HTTP_400_BAD_REQUEST)        
+        if str(external_payment_id) != verification_code:
+            return Response({"error": "Cod de verificare incorect."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Verifică dacă `valability_promote_date` este în viitor
-        if valability_promote_date < today:
-            return Response({"error": "Data de promovare nu poate fi în trecut."}, status=status.HTTP_400_BAD_REQUEST)
+        """
+        # 🔹 Dacă folosim Stripe, putem activa verificarea reală:
+        try:
+            stripe_payment = stripe.PaymentIntent.retrieve(external_payment_id)
+        except stripe.error.StripeError:
+            return Response({"error": "Plata nu a fost găsită în Stripe."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Verifică dacă `valability_promote_date` este înainte de `valability_end_date`
-        if valability_promote_date >= listing.valability_end_date:
-            return Response({"error": "Data de promovare trebuie să fie înainte de data de valabilitate."}, status=status.HTTP_400_BAD_REQUEST)
+        if stripe_payment.status != "succeeded":
+            return Response({"error": "Plata nu este confirmată încă."}, status=status.HTTP_400_BAD_REQUEST)
+        """
 
-        # Actualizează anunțul ca promovat
+        # Confirmăm plata și promovăm anunțul
+        payment.status = "paid"
+        payment.save()
+
+        listing = payment.listing
+        today = now().date()
+
+        # Setăm perioada de promovare
+        end_date = today + timedelta(days=int(payment.promoted_days))
+        listing.valability_promote_date = end_date
         listing.is_promoted = True
-        listing.valability_promote_date = valability_promote_date
         listing.save()
 
-        return Response({"success": "Anunțul a fost promovat cu succes."}, status=status.HTTP_200_OK)
+        # Salvăm istoricul promovării
+        PromotionHistory.objects.create(
+            user=payment.user,
+            listing=listing,
+            title=listing.title,
+            total_days=int(payment.promoted_days),
+            payment=payment,  # Legăm direct la plată
+            start_date=today,
+            end_date=end_date
+        )
+
+        return Response({"success": "Plata confirmată și anunț promovat."}, status=status.HTTP_200_OK)
         
 class ToggleLikeAPIView(APIView):
     permission_classes = [IsAuthenticated]

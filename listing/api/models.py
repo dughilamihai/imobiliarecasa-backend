@@ -682,7 +682,38 @@ class ImageHash(models.Model):
     hash_value = models.CharField(max_length=64, unique=True)
     listing_uuid = models.UUIDField(null=True, blank=True)  # Folosind UUID-ul pentru asocierea cu listing
     photo_name = models.CharField(max_length=100, null=True, blank=True)     
-    created_at = models.DateTimeField(auto_now_add=True)         
+    created_at = models.DateTimeField(auto_now_add=True)  
+    
+class Payment(models.Model):
+    id = models.UUIDField(primary_key=True, db_index=True, unique=True, default=uuid4, editable=False)      
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+    
+    amount_without_vat = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)  # Suma fără TVA
+    vat_amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)  # TVA calculat
+    amount_with_vat = models.DecimalField(max_digits=10, decimal_places=2)  # Suma finală cu TVA
+    
+    currency = models.CharField(max_length=3, default="RON")  
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=19.00)  # TVA implicit 19% în România
+    promoted_days = models.PositiveIntegerField(default=0)
+    external_payment_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    
+    status = models.CharField(max_length=10, choices=[('pending', 'Pending'), ('paid', 'Paid')], default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+        
+class PromotionHistory(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+    payment = models.ForeignKey(Payment, on_delete=models.SET_NULL, null=True, blank=True)  # Legătura la plată    
+    title = models.CharField(max_length=255)  # Titlul anunțului pentru evidență
+    
+    total_days = models.IntegerField()  # Numărul total de zile promovate
+    
+    start_date = models.DateField()  # Data de început a promovării
+    end_date = models.DateField()  # Data de final a promovării
+    created_at = models.DateTimeField(auto_now_add=True)  # Data înregistrării în istoricul promovărilor
+
+           
         
 class Report(models.Model):
     PENDING = 'pending'

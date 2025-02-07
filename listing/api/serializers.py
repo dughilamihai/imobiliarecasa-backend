@@ -1193,6 +1193,7 @@ class ListingMinimalSerializer(serializers.ModelSerializer):
             'zonare_display', 
             'floor_display',
             'buyer_commission',
+            'is_promoted',
         ]
         
         

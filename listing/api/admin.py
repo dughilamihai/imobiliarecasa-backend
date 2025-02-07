@@ -216,6 +216,28 @@ class ListingAdmin(admin.ModelAdmin):
             )
         return "No Image"
     thumbnail_preview.short_description = 'Thumbnail'    
+    
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ('user', 'listing', 'amount_without_vat', 'vat_amount', 'amount_with_vat', 'currency', 'vat_rate', 'promoted_days', 'external_payment_id', 'status', 'created_at')
+    list_filter = ('status',)
+    search_fields = ('user__username', 'listing__title')    
+    
+@admin.register(PromotionHistory)
+class PromotionHistoryAdmin(admin.ModelAdmin):
+    list_display = ('user', 'listing', 'title', 'total_days', 'start_date', 'end_date', 'created_at', 'amount_with_vat', 'currency', 'payment_id')
+    list_filter = ('start_date', 'end_date', 'user')
+    search_fields = ('listing__title',)
+
+    def amount_with_vat(self, obj):
+        if obj.payment:
+            return obj.payment.amount_without_vat + obj.payment.vat_amount
+        return 0
+
+    def currency(self, obj):
+        if obj.payment:
+            return obj.payment.currency
+        return 'N/A'
 
 @admin.register(Report)
 class ReportAdmin(admin.ModelAdmin):
@@ -315,12 +337,15 @@ class ManagementCommandAdmin(admin.ModelAdmin):
         urls = super().get_urls()
         custom_urls = [
             path('clear-cache/', self.admin_site.admin_view(self.clear_cache), name='clear-cache'),
+            path('delete-old-pending-payments/', self.admin_site.admin_view(self.delete_old_pending_payments), name='delete-old-pending-payments'),
         ]
         return custom_urls + urls
 
     def run_command(self, obj):
         if obj.name == 'clear_cache':
             return format_html('<a class="button" href="{}">Clear Cache</a>', reverse('admin:clear-cache'))
+        if obj.name == 'delete_old_pending_payments':
+             return format_html('<a class="button" href="{}">Delete old pending payments</a>', reverse('admin:delete-old-pending-payments'))
         else:
             return "No command linked"
 
@@ -328,6 +353,11 @@ class ManagementCommandAdmin(admin.ModelAdmin):
         call_command('clear_cache')
         self.message_user(request, "Cache cleared successfully.")
         return HttpResponseRedirect(reverse('admin:api_managementcommand_changelist'))
+    
+    def delete_old_pending_payments(self, request):
+        call_command('delete_old_pending_payments')
+        self.message_user(request, "Plățile 'pending' mai vechi de 24h au fost șterse.")
+        return HttpResponseRedirect(reverse('admin:api_managementcommand_changelist'))    
 
     run_command.short_description = 'Actions'
     run_command.allow_tags = True
