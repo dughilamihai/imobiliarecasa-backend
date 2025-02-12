@@ -246,16 +246,15 @@ class UserInfoSerializer(serializers.ModelSerializer):
             day = date.strftime('%d')
             month = MONTHS_RO[date.strftime('%B')] 
             year = date.strftime('%Y')  # Anul
-            return f"Activ pe {day} {month} {year}"
+            return f"Activ pe site la {day} {month} {year}"
         return "Inactiv"  # Mesaj de fallback dacă nu există `last_login`
     
     def get_joined_on(self, obj):
         if obj.date_joined:
-            site_name = getattr(settings, 'SITE_NAME', 'site-ul nostru')
             date = localtime(obj.date_joined)
             month = MONTHS_RO[date.strftime('%B')]
             year = date.strftime('%Y')
-            return f"Pe {site_name} din {month} {year}"
+            return f"Înregistrat pe site din {month} {year}"
         return "Data necunoscută"
       
       
@@ -1121,7 +1120,6 @@ class ListingDetailSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     tag = TagSimpleSerializer(read_only=True, many=True)
     user = UserInfoSerializer(read_only=True)  # Include datele despre utilizatorul care a adăugat anunțul    
-    phone_number = serializers.SerializerMethodField()
     
     class Meta:
         model = Listing
@@ -1155,16 +1153,8 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             'category_name',
             'tag',
             'user',
-            'phone_number', 
             'suprafata_utila',             
         ]
-        
-    def get_phone_number(self, obj):
-        # Verifică dacă utilizatorul are un număr de telefon valid
-        if obj.user and obj.user.phone_number:
-            # Convertește PhoneNumber în string (folosind metoda .as_e164 pentru formatul internațional sau str())
-            return str(obj.user.phone_number)
-        return None
     
 
 class ListingMinimalSerializer(serializers.ModelSerializer):
