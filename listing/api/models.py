@@ -28,6 +28,11 @@ from django.core.validators import RegexValidator
 from django.core.validators import MaxValueValidator, MinValueValidator
 from decimal import Decimal
 
+from django_ckeditor_5.fields import CKEditor5Field
+
+# for history
+import difflib
+
 from django.contrib.auth import get_user_model
 class County(models.Model):
     # Câmpuri de bază
@@ -790,7 +795,55 @@ class ListingActivityLog(models.Model):
     def __str__(self):
         return f'{self.listing.title} - {self.get_event_type_display()}'
     class Meta:
-        ordering = ['-timestamp']    
+        ordering = ['-timestamp']   
+        
+class PrivacyPolicySection(models.Model):
+    section_number = models.CharField(max_length=10)  # Ex: "2."
+    title = models.CharField(max_length=255)  # Ex: "Ce date prelucrăm?"
+    content = CKEditor5Field(config_name='default')
+    last_updated = models.DateTimeField(auto_now=True)
+
+    def get_diff(self, old_text, new_text):
+            """ Generează diferențele dintre texte și le salvează ca text simplu """
+            d = difflib.ndiff(old_text.split(), new_text.split())
+            diff_text = '\n'.join(
+                [word[2:] for word in d if word.startswith('+ ') or word.startswith('- ')]
+            )
+            return diff_text
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            previous = PrivacyPolicySection.objects.get(pk=self.pk)
+            if previous.title != self.title or previous.content != self.content:
+                PrivacyPolicyHistory.objects.create(
+                    section=self,
+                    old_title=previous.title,
+                    old_content=previous.content,
+                    current_title=self.title,
+                    current_content=self.content,                  
+                    diff_title=self.get_diff(previous.title, self.title),
+                    diff_content=self.get_diff(previous.content, self.content),
+                    modified_at=now()
+                )
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.section_number} - {self.title}"
+
+class PrivacyPolicyHistory(models.Model):
+    section = models.ForeignKey(PrivacyPolicySection, on_delete=models.CASCADE, related_name="history")
+    old_title = models.CharField(max_length=255)
+    old_content = CKEditor5Field(config_name='default')
+    current_title = models.CharField(max_length=255) 
+    current_content = CKEditor5Field(config_name='default')
+    diff_title = models.TextField()  # Diferențele evidențiate pentru titlu
+    diff_content = models.TextField()  # Diferențele evidențiate pentru conținut
+    modified_at = models.DateTimeField(default=now)
+
+    def __str__(self):
+        return f"History of {self.section.section_number} - {self.section.title} at {self.modified_at}"
+
+         
 class ManagementCommand(models.Model):
     name = models.CharField(max_length=255)
 

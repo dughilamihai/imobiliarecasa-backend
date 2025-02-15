@@ -1079,8 +1079,24 @@ class DeclineClaimRequestView(APIView):
             status=status.HTTP_200_OK
         )
 
+class PrivacyPolicySectionAPIView(APIView):
+    """API pentru a obține toate secțiunile politicii de confidențialitate"""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        sections = PrivacyPolicySection.objects.all().order_by('section_number')
+        serializer = PrivacyPolicySectionSerializer(sections, many=True)
+        return Response(serializer.data)
 
 
+class PrivacyPolicyHistoryAPIView(APIView):
+    """API pentru a obține istoricul modificărilor politicii"""
+
+    permission_classes = [AllowAny]
+    def get(self, request):
+        history = PrivacyPolicyHistory.objects.all().order_by('-modified_at')
+        serializer = PrivacyPolicyHistorySerializer(history, many=True)
+        return Response(serializer.data)
 
             
             

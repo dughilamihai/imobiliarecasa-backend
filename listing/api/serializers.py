@@ -1232,8 +1232,8 @@ class ReportSerializer(serializers.ModelSerializer):
         ip_address = data.get('ip_address')
         listing = self.initial_data.get('listing')  # Folosim ID-ul setat în view
 
-        if Report.objects.filter(listing=listing, ip_address=ip_address, created_at__gte=now() - timedelta(hours=24)).exists():
-            raise serializers.ValidationError({'ip_address': 'Ai raportat deja acest anunț în ultimele 24 de ore.'})
+        if Report.objects.filter(listing=listing, ip_address=ip_address, created_at__gte=now() - timedelta(hours=72)).exists():
+            raise serializers.ValidationError({'ip_address': 'Ai raportat deja acest anunț!'})
 
         if not data.get('reason'):
             raise serializers.ValidationError({"reason": "Motivul raportului este obligatoriu."})
@@ -1309,6 +1309,18 @@ class ClaimRequestSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         company = validated_data['company']
         return ClaimRequest.objects.create(user=user, company=company)
+    
+class PrivacyPolicySectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PrivacyPolicySection
+        fields = ['id', 'section_number', 'title', 'content', 'last_updated']
+class PrivacyPolicyHistorySerializer(serializers.ModelSerializer):
+    section_title = serializers.CharField(source='section.title', read_only=True)
+    section_number = serializers.CharField(source='section.section_number', read_only=True)
+
+    class Meta:
+        model = PrivacyPolicyHistory
+        fields = ['id', 'section_number', 'section_title', 'current_title', 'current_content', 'old_title', 'old_content', 'diff_title', 'diff_content', 'modified_at']   
  
 
 

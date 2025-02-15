@@ -51,7 +51,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',  
     'django_bleach', # for cleaning htmlfile fields      
     'django_filters', # for filtering fields    
-    'corsheaders',       
+    'corsheaders',  
+    'django_ckeditor_5',  
 ]
 
 MIDDLEWARE = [
@@ -254,3 +255,14 @@ CORS_ALLOWED_ORIGINS = [
     "https://imobiliare.casa",            
     # Add other allowed origins as needed
 ]
+
+CKEDITOR_5_CONFIGS = {
+    'default': {
+        'toolbar': [
+            'bold', 'italic', 'underline', 'link', 'blockquote', 'code',
+            '|', 'bulletedList', 'numberedList', 'outdent', 'indent'
+        ],
+        'height': 300,
+        'width': '100%',
+    }
+}

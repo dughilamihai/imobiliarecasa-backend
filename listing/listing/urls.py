@@ -39,6 +39,7 @@ urlpatterns = [
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),  # Verificare token (opțional)    
     path('api/password-reset/', PasswordResetRequestView.as_view(), name='password_reset_request'),
     path('api/password-reset/confirm/<uidb64>/<token>/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),  
+    path("ckeditor5/", include('django_ckeditor_5.urls')),
 ]
 
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
