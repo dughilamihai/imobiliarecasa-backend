@@ -39,5 +39,7 @@ urlpatterns = [
     path('listings/<uuid:uuid>/similar/', SimilarListingsAPIView.as_view(), name='listing-similar'),     
     path('listings/<uuid:uuid>/toggle-like/', ToggleLikeAPIView.as_view(), name='toggle_like'), 
     path('reports/<uuid:uuid>/', ReportCreateAPIView.as_view(), name='report-create'), # Ruta pentru a crea un raport
-    path('suggestions/', SuggestionCreateAPIView.as_view(), name='create-suggestion'),    
+    path('suggestions/', SuggestionCreateAPIView.as_view(), name='create-suggestion'),   
+    path('privacy-policy/', PrivacyPolicySectionAPIView.as_view(), name='privacy-policy'),
+    path('privacy-policy-history/', PrivacyPolicyHistoryAPIView.as_view(), name='privacy-policy-history'),     
 ]
