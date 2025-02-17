@@ -1098,5 +1098,23 @@ class PrivacyPolicyHistoryAPIView(APIView):
         serializer = PrivacyPolicyHistorySerializer(history, many=True)
         return Response(serializer.data)
 
+class TermsPolicySectionAPIView(APIView):
+    """API pentru a obține toate secțiunile termeni si conditii."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        sections = TermsPolicySection.objects.all().order_by('section_number')
+        serializer = TermsPolicySectionSerializer(sections, many=True)
+        return Response(serializer.data)
+
+
+class TermsPolicyHistoryAPIView(APIView):
+    """API pentru a obține istoricul modificărilor politicii"""
+
+    permission_classes = [AllowAny]
+    def get(self, request):
+        history = TermsPolicyHistory.objects.all().order_by('-modified_at')
+        serializer = TermsPolicyHistorySerializer(history, many=True)
+        return Response(serializer.data)
             
             

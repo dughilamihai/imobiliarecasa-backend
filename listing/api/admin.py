@@ -343,6 +343,20 @@ class PrivacyPolicyHistoryAdmin(admin.ModelAdmin):
     search_fields = ('section__title',)
     readonly_fields = ('section', 'old_title', 'old_content', 'diff_title', 'diff_content', 'modified_at')
     ordering = ('-modified_at',)
+    
+@admin.register(TermsPolicySection)
+class TermsPolicySectionAdmin(admin.ModelAdmin):
+    list_display = ('section_number', 'title', 'last_updated')
+    search_fields = ('section_number', 'title')
+    readonly_fields = ('last_updated',)
+    ordering = ('section_number',)
+
+@admin.register(TermsPolicyHistory)
+class TermsPolicyHistoryAdmin(admin.ModelAdmin):
+    list_display = ('section', 'old_title', 'diff_title', 'diff_content', 'modified_at') 
+    search_fields = ('section__title',)
+    readonly_fields = ('section', 'old_title', 'old_content', 'diff_title', 'diff_content', 'modified_at')
+    ordering = ('-modified_at',)    
         
 class ManagementCommandAdmin(admin.ModelAdmin):
     list_display = ['name', 'run_command']

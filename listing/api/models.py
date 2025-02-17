@@ -32,6 +32,7 @@ from django_ckeditor_5.fields import CKEditor5Field
 
 # for history
 import difflib
+import re
 
 from django.contrib.auth import get_user_model
 class County(models.Model):
@@ -798,18 +799,28 @@ class ListingActivityLog(models.Model):
         ordering = ['-timestamp']   
         
 class PrivacyPolicySection(models.Model):
-    section_number = models.CharField(max_length=10)  # Ex: "2."
-    title = models.CharField(max_length=255)  # Ex: "Ce date prelucrăm?"
+    section_number = models.CharField(max_length=10) 
+    title = models.CharField(max_length=255)
     content = CKEditor5Field(config_name='default')
     last_updated = models.DateTimeField(auto_now=True)
 
-    def get_diff(self, old_text, new_text):
-            """ Generează diferențele dintre texte și le salvează ca text simplu """
-            d = difflib.ndiff(old_text.split(), new_text.split())
-            diff_text = '\n'.join(
-                [word[2:] for word in d if word.startswith('+ ') or word.startswith('- ')]
-            )
-            return diff_text
+    @staticmethod
+    def clean_text(html_text):
+        """Elimină tag-urile HTML și normalizează textul"""
+        text = re.sub(r"<[^>]+>", " ", html_text)  # Elimină tag-urile HTML
+        return " ".join(text.split())  # Normalizează spațiile
+
+    @staticmethod
+    def get_diff(old_text, new_text):
+        """Generează diferențele dintre texte fără HTML"""
+        old_clean = TermsPolicySection.clean_text(old_text)  # Accesăm metoda statică
+        new_clean = TermsPolicySection.clean_text(new_text)
+        
+        d = difflib.ndiff(old_clean.split(), new_clean.split())
+        diff_text = '\n'.join(
+            [word[2:] for word in d if word.startswith('+ ') or word.startswith('- ')]
+        )
+        return diff_text
 
     def save(self, *args, **kwargs):
         if self.pk:
@@ -842,6 +853,62 @@ class PrivacyPolicyHistory(models.Model):
 
     def __str__(self):
         return f"History of {self.section.section_number} - {self.section.title} at {self.modified_at}"
+    
+class TermsPolicySection(models.Model):
+    section_number = models.CharField(max_length=10)
+    title = models.CharField(max_length=255)
+    content = CKEditor5Field(config_name='default')
+    last_updated = models.DateTimeField(auto_now=True)
+
+    @staticmethod
+    def clean_text(html_text):
+        """Elimină tag-urile HTML și normalizează textul"""
+        text = re.sub(r"<[^>]+>", " ", html_text)  # Elimină tag-urile HTML
+        return " ".join(text.split())  # Normalizează spațiile
+
+    @staticmethod
+    def get_diff(old_text, new_text):
+        """Generează diferențele dintre texte fără HTML"""
+        old_clean = TermsPolicySection.clean_text(old_text)  # Accesăm metoda statică
+        new_clean = TermsPolicySection.clean_text(new_text)
+        
+        d = difflib.ndiff(old_clean.split(), new_clean.split())
+        diff_text = '\n'.join(
+            [word[2:] for word in d if word.startswith('+ ') or word.startswith('- ')]
+        )
+        return diff_text
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            previous = TermsPolicySection.objects.get(pk=self.pk)
+            if previous.title != self.title or previous.content != self.content:
+                TermsPolicyHistory.objects.create(
+                    section=self,
+                    old_title=previous.title,
+                    old_content=previous.content,
+                    current_title=self.title,
+                    current_content=self.content,                  
+                    diff_title=self.get_diff(previous.title, self.title),
+                    diff_content=self.get_diff(previous.content, self.content),
+                    modified_at=now()
+                )
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.section_number} - {self.title}"
+
+class TermsPolicyHistory(models.Model):
+    section = models.ForeignKey(TermsPolicySection, on_delete=models.CASCADE, related_name="history")
+    old_title = models.CharField(max_length=255)
+    old_content = CKEditor5Field(config_name='default')
+    current_title = models.CharField(max_length=255) 
+    current_content = CKEditor5Field(config_name='default')
+    diff_title = models.TextField()  # Diferențele evidențiate pentru titlu
+    diff_content = models.TextField()  # Diferențele evidențiate pentru conținut
+    modified_at = models.DateTimeField(default=now)
+
+    def __str__(self):
+        return f"History of {self.section.section_number} - {self.section.title} at {self.modified_at}"    
 
          
 class ManagementCommand(models.Model):

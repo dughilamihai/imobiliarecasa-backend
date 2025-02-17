@@ -41,5 +41,7 @@ urlpatterns = [
     path('reports/<uuid:uuid>/', ReportCreateAPIView.as_view(), name='report-create'), # Ruta pentru a crea un raport
     path('suggestions/', SuggestionCreateAPIView.as_view(), name='create-suggestion'),   
     path('privacy-policy/', PrivacyPolicySectionAPIView.as_view(), name='privacy-policy'),
-    path('privacy-policy-history/', PrivacyPolicyHistoryAPIView.as_view(), name='privacy-policy-history'),     
+    path('privacy-policy-history/', PrivacyPolicyHistoryAPIView.as_view(), name='privacy-policy-history'),    
+    path('terms-policy/', TermsPolicySectionAPIView.as_view(), name='terms-policy'),
+    path('terms-policy-history/', TermsPolicyHistoryAPIView.as_view(), name='terms-policy-history'),        
 ]

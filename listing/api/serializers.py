@@ -1322,6 +1322,17 @@ class PrivacyPolicyHistorySerializer(serializers.ModelSerializer):
         model = PrivacyPolicyHistory
         fields = ['id', 'section_number', 'section_title', 'current_title', 'current_content', 'old_title', 'old_content', 'diff_title', 'diff_content', 'modified_at']   
  
+class TermsPolicySectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TermsPolicySection
+        fields = ['id', 'section_number', 'title', 'content', 'last_updated']
+class TermsPolicyHistorySerializer(serializers.ModelSerializer):
+    section_title = serializers.CharField(source='section.title', read_only=True)
+    section_number = serializers.CharField(source='section.section_number', read_only=True)
 
+    class Meta:
+        model = TermsPolicyHistory
+        fields = ['id', 'section_number', 'section_title', 'current_title', 'current_content', 'old_title', 'old_content', 'diff_title', 'diff_content', 'modified_at']   
+ 
 
 
