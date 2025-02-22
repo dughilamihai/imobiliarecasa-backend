@@ -50,7 +50,6 @@ cartiere_orase = {
         "Aurel Vlaicu",
         "Gai",
         "Sânnicolau Mic",
-        "Craiova",
         "Bătăi",
         "Grădiște"
     ],
@@ -403,6 +402,7 @@ cartiere_orase = {
         "Centrul Orașului",
     ],
     "Craiova": [
+        "Calea București",        
         "Centrul Istoric",
         "Bănie",
         "Bucovăț",

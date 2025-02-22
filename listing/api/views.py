@@ -146,8 +146,41 @@ class CityDetailAV(APIView):
         except City.DoesNotExist:
             # Răspuns personalizat pentru 404
             return Response({"detail": "Orașul nu a fost găsit."}, status=404)
+        
+class NeighborhoodListByCityAV(APIView):
+    permission_classes = [AllowAny]
 
-          
+    def get(self, request, city_slug, county_slug):
+        try:
+            # Găsește orașul pe baza slug-ului și a județului
+            city = City.objects.get(slug=city_slug, county__slug=county_slug)
+            
+            # Obține toate cartierele din orașul respectiv
+            neighborhoods = city.neighborhoods.all()
+
+            # Serializare date
+            serializer = NeighborhoodSerializer(neighborhoods, many=True)
+            return Response(serializer.data)
+        except City.DoesNotExist:
+            return Response({"detail": "Orașul nu a fost găsit în județul specificat."}, status=404)
+        
+
+class NeighborhoodDetailAV(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, neighborhood_slug=None, city_slug=None, county_slug=None, *args, **kwargs):
+        try:
+            # Obține cartierul pe baza slug-urilor
+            neighborhood = Neighborhood.objects.get(
+                slug=neighborhood_slug, 
+                city__slug=city_slug, 
+                city__county__slug=county_slug
+            )
+            serializer = NeighborhoodSerializer(neighborhood)
+            return Response(serializer.data, status=200)
+        except Neighborhood.DoesNotExist:
+            # Răspuns personalizat pentru 404
+            return Response({"detail": "Cartierul nu a fost găsit."}, status=404)          
     
 # register user        
 class UserRegistrationAPIView(APIView):
@@ -362,8 +395,6 @@ class PasswordResetRequestView(APIView):
     throttle_classes = [AnonRateThrottle, UserRateThrottle]
 
     def post(self, request, *args, **kwargs):
-        logger.info("Post method reached")
-        print("Post method reached")
         email = request.data.get("email", "").strip()
 
         if not email:
@@ -522,8 +553,9 @@ class ListingFilter(filters.FilterSet):
     price_min = filters.NumberFilter(field_name="price", lookup_expr="gte")
     price_max = filters.NumberFilter(field_name="price", lookup_expr="lte")
     category = filters.NumberFilter(field_name="category_id", lookup_expr="exact")
-    county = filters.NumberFilter(field_name="county__id", lookup_expr="exact")    
-    city = filters.NumberFilter(field_name="city__id", lookup_expr="exact")
+    county = filters.NumberFilter(field_name="county_id", lookup_expr="exact")    
+    city = filters.NumberFilter(field_name="city_id", lookup_expr="exact")
+    neighborhood = filters.NumberFilter(field_name="neighborhood_id", lookup_expr="exact")    
     year_of_construction_min = filters.NumberFilter(field_name='year_of_construction', lookup_expr='gte', label='An minim Construcție')
     year_of_construction_max = filters.NumberFilter(field_name='year_of_construction', lookup_expr='lte', label='An maxim Construcție') 
     username_hash = filters.CharFilter(field_name="user__username_hash", lookup_expr="exact")   
@@ -543,7 +575,7 @@ class ListingFilter(filters.FilterSet):
     class Meta:
         model = Listing
         fields = [
-            'category', 'price_min', 'price_max', 'city__id', 'county__id',
+            'category', 'price_min', 'price_max', 'city', 'county', 'neighborhood',
             'year_of_construction_min', 'year_of_construction_max', 
             'username_hash', 'suprafata_utila_min', 'suprafata_utila_max', 'floor', 'is_promoted'
         ]

@@ -64,7 +64,17 @@ class CountySerializer(serializers.ModelSerializer):
 class CitySerializer(serializers.ModelSerializer):
     class Meta:
         model = City
-        exclude = ['date_created']  # Exclude câmpul date_created        
+        exclude = ['date_created']    
+        
+class NeighborhoodSerializer(serializers.ModelSerializer):
+    cityName = serializers.SerializerMethodField()
+    county = serializers.IntegerField(source="city.county.id", read_only=True)
+    class Meta:
+        model = Neighborhood
+        exclude = ['date_created'] 
+        
+    def get_cityName(self, obj):
+        return obj.city.name if obj.city else None                   
     
 # for user
 class UserSerializer(serializers.ModelSerializer):
@@ -1118,6 +1128,10 @@ class ListingDetailSerializer(serializers.ModelSerializer):
     city_name = serializers.CharField(source='city.name', read_only=True)
     neighborhood_name = serializers.CharField(source='neighborhood.name', read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
+    county_slug = serializers.CharField(source='county.slug', read_only=True)
+    city_slug = serializers.CharField(source='city.slug', read_only=True)
+    neighborhood_slug = serializers.CharField(source='neighborhood.slug', read_only=True)
+    category_slug = serializers.CharField(source='category.slug', read_only=True)    
     tag = TagSimpleSerializer(read_only=True, many=True)
     user = UserInfoSerializer(read_only=True)  # Include datele despre utilizatorul care a adăugat anunțul    
     
@@ -1151,6 +1165,10 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             'city_name',
             'neighborhood_name',
             'category_name',
+            'county_slug',
+            'city_slug',
+            'neighborhood_slug',
+            'category_slug',            
             'tag',
             'user',
             'suprafata_utila',             
