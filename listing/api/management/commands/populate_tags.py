@@ -13,6 +13,7 @@ class Command(BaseCommand):
             "meta_title": "Apartamente și garsoniere cu boxă proprie pentru depozitare",
             "meta_description": "Descoperă apartamente și garsoniere dotate cu boxă proprie pentru depozitare. Oferte ideale pentru cei care au nevoie de spațiu suplimentar organizat și sigur.",
             "description": "Locuințe moderne, precum apartamente și garsoniere, cu boxă proprie inclusă. Perfecte pentru depozitarea obiectelor personale, oferind un plus de confort și funcționalitate.",
+            "icon_name": "inventory",  
             "categories": [
                 "Apartamente",
                 "Apartamente cu 1 cameră de închiriat",
@@ -26,13 +27,14 @@ class Command(BaseCommand):
                 "Garsoniere de închiriat",
                 "Garsoniere de vânzare"
             ]
-        },              
+        },        
         # tag-uri pentru apartamente, case, vile, spatii comerciale, pensiuni si hoteluri
         {
             "name": "Aer condiționat",
             "meta_title": "Apartamente, case, vile, spatii comerciale, garsoniere cu aer condiționat",
             "meta_description": "Caută apartamente, garsoniere, case, vile sau spații comerciale dotate cu aer condiționat. Găsește locuințe confortabile, ideale pentru zilele toride de vară.",
             "description": "Locuințe și spații comerciale moderne, dotate cu aer condiționat, pentru un confort sporit. Alege dintr-o gamă variată de apartamente, garsoniere, case și vile cu facilități complete.",
+            "icon_name": "ac_unit",             
             "categories": [
                 "Apartamente",
                 "Apartamente cu 1 cameră de închiriat",
@@ -61,6 +63,7 @@ class Command(BaseCommand):
             "meta_title": "Apartamente, case, vile, spatii comerciale, garsoniere cu locuri de parcare proprii",
             "meta_description": "Alege o locuință, apartament, garsoniera, casa, vila, spatiu comercial cu parcare proprie și beneficiază de un spațiu sigur și accesibil. Descoperă oferte de apartamente cu parcare inclusă.",
             "description": "Apartamente, case, vile, spatii comerciale, garsoniere cu locuri de parcare proprii, accesibile și sigure, în zone centrale și rezidențiale. Oferte pentru toate tipurile de locuințe.",
+            "icon_name": "ac_unit", 
             "categories": ["Apartamente", "Apartamente cu 1 cameră de închiriat", "Apartamente cu 1 cameră de vânzare", "Apartamente cu 2 camere de închiriat", "Apartamente cu 2 camere de vânzare", "Apartamente cu 3 camere de închiriat", "Apartamente cu 3 camere de vânzare", "Apartamente cu 4+ camere de închiriat", "Apartamente cu 4+ camere de vânzare", "Birouri de închiriat", "Birouri de vânzare", "Birouri și Spații Comerciale", "	Case de închiriat", "Case de vânzare", "Case și Vile", "Garsoniere de închiriat", "Garsoniere de vânzare", "Pensiuni și hoteluri", "Spații comerciale de închiriat", "Spații comerciale de vânzare"]
         },
         {
@@ -68,6 +71,7 @@ class Command(BaseCommand):
             "meta_title": "Apartamente, case, vile, spatii comerciale, garsoniere cu centrală proprie",
             "meta_description": "Descoperă locuințe moderne cu centrală proprie: apartamente, case, garsoniere și vile pentru un confort termic optim. Oferte diverse în toate zonele.",
             "description": "Proprietăți dotate cu centrală proprie, ideale pentru un consum eficient și un confort termic sporit. Alege dintr-o selecție variată de apartamente, case, vile și spații comerciale.",
+            "icon_name": "ac_unit",
             "categories": [
                 "Apartamente",
                 "Apartamente cu 1 cameră de închiriat",
@@ -97,6 +101,7 @@ class Command(BaseCommand):
             "meta_title": "Apartamente, case, vile, spatii comerciale, garsoniere cu garaj propriu",
             "meta_description": "Găsește locuințe cu garaj propriu: apartamente, case, vile și spații comerciale. Oferte variate pentru un plus de confort și siguranță pentru mașina ta.",
             "description": "Proprietăți cu garaj propriu, perfecte pentru cei care caută un spațiu sigur și practic pentru mașina lor. Descoperă apartamente, garsoniere, case și vile dotate cu garaj în zone atractive.",
+            "icon_name": "garage",            
             "categories": [
                 "Apartamente",
                 "Apartamente cu 1 cameră de închiriat",
@@ -117,6 +122,35 @@ class Command(BaseCommand):
                 "Garsoniere de vânzare",
                 "Spații comerciale de închiriat",
                 "Spații comerciale de vânzare"
+            ],
+        },
+        {
+            "name": "Balcon închis",
+            "meta_title": "Apartamente, case, vile, garsoniere cu balcon închis",
+            "meta_description": "Descoperă locuințe moderne cu balcon închis, perfecte pentru confortul tău. Apartamente, case, garsoniere și vile cu balcoane închise, ideale pentru o atmosferă mai intimă și protejată.",
+            "description": "Locuințe dotate cu balcon închis, oferind un spațiu suplimentar protejat. Apartamente, case, vile și garsoniere ideale pentru confortul termic și protecția împotriva intemperiilor.",
+            "icon_name": "home",            
+            "categories": [
+                "Apartamente",
+                "Apartamente cu 1 cameră de închiriat",
+                "Apartamente cu 1 cameră de vânzare",
+                "Apartamente cu 2 camere de închiriat",
+                "Apartamente cu 2 camere de vânzare",
+                "Apartamente cu 3 camere de închiriat",
+                "Apartamente cu 3 camere de vânzare",
+                "Apartamente cu 4+ camere de închiriat",
+                "Apartamente cu 4+ camere de vânzare",
+                "Birouri de închiriat",
+                "Birouri de vânzare",
+                "Birouri și Spații Comerciale",
+                "Case de închiriat",
+                "Case de vânzare",
+                "Case și Vile",
+                "Garsoniere de închiriat",
+                "Garsoniere de vânzare",
+                "Pensiuni și hoteluri",
+                "Spații comerciale de închiriat",
+                "Spații comerciale de vânzare"
             ]
         },
         # tag-uri pentru case, vile, spatii comerciale, pensiuni si hoteluri
@@ -125,6 +159,7 @@ class Command(BaseCommand):
             "meta_title": "Case, vile și pensiuni cu beci pentru depozitare",
             "meta_description": "Explorează oferte de case, vile și pensiuni dotate cu beci. Ideal pentru depozitare sau amenajări speciale, aceste proprietăți oferă funcționalitate suplimentară.",
             "description": "Proprietăți moderne și tradiționale, precum case, vile și pensiuni, dotate cu beci spațios. Perfect pentru depozitare, păstrarea alimentelor sau alte utilizări personalizate.",
+            "icon_name": "store",            
             "categories": [
                 "Case de închiriat",
                 "Case de vânzare",
@@ -137,6 +172,7 @@ class Command(BaseCommand):
             "meta_title": "Case, vile și pensiuni cu piscină proprie pentru relaxare",
             "meta_description": "Găsește case, vile și pensiuni dotate cu piscină proprie. Bucură-te de confort, intimitate și relaxare în locuințe exclusiviste cu piscină.",
             "description": "Proprietăți premium, precum case, vile și pensiuni, dotate cu piscină proprie. Oferă un plus de lux și confort, perfecte pentru relaxare și activități recreative.",
+            "icon_name": "pool",            
             "categories": [
                 "Case de închiriat",
                 "Case de vânzare",
@@ -150,6 +186,7 @@ class Command(BaseCommand):
             "meta_title": "Terenuri și proprietăți cu acces la drum asfaltat",
             "meta_description": "Descoperă terenuri și proprietăți, depozite, hale industriale cu acces direct la drum asfaltat. Ideal pentru construcții, agricultură sau activități industriale, cu infrastructură modernă.",
             "description": "Proprietăți și terenuri cu acces la drum asfaltat, depozite, hale industriale perfecte pentru dezvoltare industrială, agricultură sau construcții rezidențiale. Infrastructura asigură acces rapid și facil pentru orice tip de activitate.",
+            "icon_name": "alt_route",            
             "categories": [
                 "Terenuri",
                 "Terenuri agricole",
@@ -164,6 +201,7 @@ class Command(BaseCommand):
             "meta_title": "Terenuri și proprietăți cu utilități disponibile",
             "meta_description": "Găsește terenuri și proprietăți, hale industriale dotate cu utilități disponibile: apă, gaz, curent electric și canalizare. Ideal pentru construcții, agricultură sau activități industriale.",
             "description": "Terenuri și proprietăți, hale industriale cu utilități disponibile, inclusiv apă, gaz, electricitate și canalizare. Aceste oferte sunt perfecte pentru construcții rezidențiale, industriale sau activități agricole.",
+            "icon_name": "bolt",            
             "categories": [
                 "Terenuri",
                 "Terenuri agricole",

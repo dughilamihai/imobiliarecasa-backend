@@ -9,36 +9,84 @@ CATEGORIES = [
         "description": "Găsește cele mai bune apartamente de vânzare și închiriere.",
         "custom_text": "Apartamente de vânzare și închiriere în toate zonele orașului, ideale pentru familii, tineri profesioniști și studenți.",
         "subcategories": [
-            {"name": "Garsoniere de vânzare", "meta_title": "Garsoniere de vânzare", "meta_description": "Garsoniere de vânzare, perfecte pentru investiții și locuit.",
-             "description": "Vezi cele mai bune oferte de garsoniere de vânzare.", 
-             "custom_text": "Garsoniere de vânzare în zone centrale și periferice, ideale pentru locuit sau investiții."},
-            {"name": "Garsoniere de închiriat", "meta_title": "Garsoniere de închiriat", "meta_description": "Găsește garsoniere de închiriat în diverse locații.",
-             "description": "Garsoniere confortabile de închiriat, în diverse locații.",
-             "custom_text": "Închirieri de garsoniere pentru studenți, tineri profesioniști sau cupluri în diverse cartiere ale orașului."},
-            {"name": "Apartamente cu 1 cameră de vânzare", "meta_title": "Apartamente cu 1 cameră de vânzare", "meta_description": "Descoperă apartamente cu 1 cameră de vânzare.",
-             "description": "Cele mai atractive apartamente cu 1 cameră de vânzare.",
-             "custom_text": "Apartamente cu 1 cameră, ideale pentru cei aflați la început de drum sau pentru investiții."},
-            {"name": "Apartamente cu 1 cameră de închiriat", "meta_title": "Apartamente cu 1 cameră de închiriat", "meta_description": "Închiriază apartamente cu 1 cameră confortabile.",
-             "description": "Găsește apartamente cu 1 cameră de închiriat la prețuri accesibile.",
-             "custom_text": "Închirieri de apartamente cu 1 cameră, potrivite pentru studenți și tineri profesioniști."},
-            {"name": "Apartamente cu 2 camere de vânzare", "meta_title": "Apartamente cu 2 camere de vânzare", "meta_description": "Apartamente cu 2 camere de vânzare, ideale pentru familii mici.",
-             "description": "Vezi cele mai bune oferte de apartamente cu 2 camere de vânzare.",
-             "custom_text": "Apartamente cu 2 camere de vânzare, perfecte pentru familii și cupluri."},
-            {"name": "Apartamente cu 2 camere de închiriat", "meta_title": "Apartamente cu 2 camere de închiriat", "meta_description": "Închiriază apartamente cu 2 camere în orașul tău.",
-             "description": "Apartamente confortabile cu 2 camere de închiriat.",
-             "custom_text": "Închirieri apartamente cu 2 camere, ideale pentru familii mici sau cupluri."},
-            {"name": "Apartamente cu 3 camere de vânzare", "meta_title": "Apartamente cu 3 camere de vânzare", "meta_description": "Găsește apartamente spațioase cu 3 camere de vânzare.",
-             "description": "Apartamente cu 3 camere de vânzare, ideale pentru familii numeroase.",
-             "custom_text": "Apartamente mari, cu 3 camere, perfecte pentru familii numeroase."},
-            {"name": "Apartamente cu 3 camere de închiriat", "meta_title": "Apartamente cu 3 camere de închiriat", "meta_description": "Închiriază apartamente spațioase cu 3 camere.",
-             "description": "Apartamente cu 3 camere de închiriat, confortabile și spațioase.",
-             "custom_text": "Apartamente cu 3 camere de închiriat, excelente pentru familii."},
-            {"name": "Apartamente cu 4+ camere de vânzare", "meta_title": "Apartamente cu 4+ camere de vânzare", "meta_description": "Apartamente mari cu 4+ camere de vânzare.",
-             "description": "Apartamente spațioase cu 4+ camere de vânzare pentru familii mari.",
-             "custom_text": "Apartamente de lux cu 4 sau mai multe camere, ideale pentru familii mari."},
-            {"name": "Apartamente cu 4+ camere de închiriat", "meta_title": "Apartamente cu 4+ camere de închiriat", "meta_description": "Închiriază apartamente spațioase cu 4+ camere.",
-             "description": "Apartamente de închiriat cu 4+ camere, perfecte pentru spații de locuit generoase.",
-             "custom_text": "Închirieri apartamente mari, cu 4 sau mai multe camere, pentru spațiu și confort."}
+            {
+                "name": "Garsoniere de vânzare",
+                "meta_title": "Garsoniere de vânzare",
+                "meta_description": "Garsoniere de vânzare, perfecte pentru investiții și locuit.",
+                "description": "Vezi cele mai bune oferte de garsoniere de vânzare.",
+                "custom_text": "Garsoniere de vânzare în zone centrale și periferice, ideale pentru locuit sau investiții.",
+                "numar_camere_maxim": 1
+            },
+            {
+                "name": "Garsoniere de închiriat",
+                "meta_title": "Garsoniere de închiriat",
+                "meta_description": "Găsește garsoniere de închiriat în diverse locații.",
+                "description": "Garsoniere confortabile de închiriat, în diverse locații.",
+                "custom_text": "Închirieri de garsoniere pentru studenți, tineri profesioniști sau cupluri în diverse cartiere ale orașului.",
+                "numar_camere_maxim": 1
+            },
+            {
+                "name": "Apartamente cu 1 cameră de vânzare",
+                "meta_title": "Apartamente cu 1 cameră de vânzare",
+                "meta_description": "Descoperă apartamente cu 1 cameră de vânzare.",
+                "description": "Cele mai atractive apartamente cu 1 cameră de vânzare.",
+                "custom_text": "Apartamente cu 1 cameră, ideale pentru cei aflați la început de drum sau pentru investiții.",
+                "numar_camere_maxim": 1
+            },
+            {
+                "name": "Apartamente cu 1 cameră de închiriat",
+                "meta_title": "Apartamente cu 1 cameră de închiriat",
+                "meta_description": "Închiriază apartamente cu 1 cameră confortabile.",
+                "description": "Găsește apartamente cu 1 cameră de închiriat la prețuri accesibile.",
+                "custom_text": "Închirieri de apartamente cu 1 cameră, potrivite pentru studenți și tineri profesioniști.",
+                "numar_camere_maxim": 1
+            },
+            {
+                "name": "Apartamente cu 2 camere de vânzare",
+                "meta_title": "Apartamente cu 2 camere de vânzare",
+                "meta_description": "Apartamente cu 2 camere de vânzare, ideale pentru familii mici.",
+                "description": "Vezi cele mai bune oferte de apartamente cu 2 camere de vânzare.",
+                "custom_text": "Apartamente cu 2 camere de vânzare, perfecte pentru familii și cupluri.",
+                "numar_camere_maxim": 2
+            },
+            {
+                "name": "Apartamente cu 2 camere de închiriat",
+                "meta_title": "Apartamente cu 2 camere de închiriat",
+                "meta_description": "Închiriază apartamente cu 2 camere în orașul tău.",
+                "description": "Apartamente confortabile cu 2 camere de închiriat.",
+                "custom_text": "Închirieri apartamente cu 2 camere, ideale pentru familii mici sau cupluri.",
+                "numar_camere_maxim": 2
+            },
+            {
+                "name": "Apartamente cu 3 camere de vânzare",
+                "meta_title": "Apartamente cu 3 camere de vânzare",
+                "meta_description": "Găsește apartamente spațioase cu 3 camere de vânzare.",
+                "description": "Apartamente cu 3 camere de vânzare, ideale pentru familii numeroase.",
+                "custom_text": "Apartamente mari, cu 3 camere, perfecte pentru familii numeroase.",
+                "numar_camere_maxim": 3
+            },
+            {
+                "name": "Apartamente cu 3 camere de închiriat",
+                "meta_title": "Apartamente cu 3 camere de închiriat",
+                "meta_description": "Închiriază apartamente spațioase cu 3 camere.",
+                "description": "Apartamente cu 3 camere de închiriat, confortabile și spațioase.",
+                "custom_text": "Apartamente cu 3 camere de închiriat, excelente pentru familii.",
+                "numar_camere_maxim": 3
+            },
+            {
+                "name": "Apartamente cu 4+ camere de vânzare",
+                "meta_title": "Apartamente cu 4+ camere de vânzare",
+                "meta_description": "Apartamente mari cu 4+ camere de vânzare.",
+                "description": "Apartamente spațioase cu 4+ camere de vânzare pentru familii mari.",
+                "custom_text": "Apartamente de lux cu 4 sau mai multe camere, ideale pentru familii mari."
+            },
+            {
+                "name": "Apartamente cu 4+ camere de închiriat",
+                "meta_title": "Apartamente cu 4+ camere de închiriat",
+                "meta_description": "Închiriază apartamente spațioase cu 4+ camere.",
+                "description": "Apartamente de închiriat cu 4+ camere, perfecte pentru spații de locuit generoase.",
+                "custom_text": "Închirieri apartamente mari, cu 4 sau mai multe camere, pentru spațiu și confort."
+            }
         ]
     },
     {

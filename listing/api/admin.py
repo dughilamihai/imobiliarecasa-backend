@@ -154,7 +154,7 @@ admin.site.register(EmailConfirmationToken, EmailConfirmationTokenAdmin)
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ('name', 'status', 'slug', 'date_created')
+    list_display = ('name', 'status', 'slug', 'icon_name', 'date_created')
     list_filter = ('status',)
     search_fields = ('name', 'slug')
     

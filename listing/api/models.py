@@ -21,7 +21,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 # for listings
 from django_resized import ResizedImageField
 from django_bleach.models import BleachField
-from .constants import FLOOR_CHOICES
+from .constants import *
 
 # for validation
 from django.core.validators import RegexValidator
@@ -121,6 +121,7 @@ class Category(MPTTModel):
         (2, 'Case și Vile'),
         (3, 'Terenuri'),
         (4, 'Alte proprietăți'),
+        (5, 'Pensiuni și hoteluri'),
     ]    
     name = models.CharField(max_length=60, blank=True)   
     parent = TreeForeignKey("self", on_delete=models.PROTECT, null=True, blank=True, related_name='children')
@@ -132,6 +133,7 @@ class Category(MPTTModel):
     image = ResizedImageField(size=[160, 160], crop=['middle', 'center'], quality=80, upload_to='category_images/', blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    numar_camere_maxim = models.IntegerField(null=True, blank=True)
     group = models.SmallIntegerField(
         choices=CATEGORY_GROUP_CHOICES,
         null=True,
@@ -272,7 +274,6 @@ class User(AbstractUser):
             # Handle unverified email
             raise ValidationError("Adresa de email nu a fost validata")
         return None
-
 
 class UserSubscription(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="subscription")
@@ -455,45 +456,17 @@ class Like(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'listing')  # Un utilizator poate da like o singură dată la un anunț            
-
+        unique_together = ('user', 'listing')  # Un utilizator poate da like o singură dată la un anunț  
+                  
+def default_expiry_date():
+    return now().date() + timedelta(days=90)
 class Listing(models.Model):
     STATUS_CHOICES = [
         (0, 'Inactive'),
         (1, 'Active'),
         (2, 'Rejected'),
     ]
-    CURRENCY_CHOICES = [
-        (0, 'Lei'),
-        (1, 'EUR'),
-    ]
-    COMPARTIMENTARE_CHOICES = [
-        (0, 'decomandat'),
-        (1, 'semidecomandat'),
-        (2, 'nedecomandat'),
-        (3, 'circular'),
-    ]
-    ZONARE_CHOICES = [
-        (0, 'intravilan'),
-        (1, 'extravilan'),
-    ] 
-    NUMAR_CAMERE_CHOICES = [
-        (1, '1 Cameră'),
-        (2, '2 Camere'),
-        (3, '3 Camere'),
-        (4, '4 Camere'),
-        (5, '5+ Camere'),
-    ]  
-    STRUCTURA_CHOICES = [
-        (0, 'caramida'),
-        (1, 'beton'),
-        (2, 'BCA'),
-        (3, 'placi'),
-        (4, 'lemn'),
-        (5, 'metal'),
-        (6, 'altele'),
-    ]        
-    
+  
     # Câmpuri de bază
     id = models.UUIDField(primary_key=True, db_index=True, unique=True, default=uuid4, editable=False)       
     title = models.CharField(max_length=200, db_index=True)
@@ -502,12 +475,7 @@ class Listing(models.Model):
         help_text="Prețul trebuie să fie un număr întreg și pozitiv."
     )
     currency = models.SmallIntegerField(choices=CURRENCY_CHOICES, default=1)
-    negociabil = models.BooleanField(default=False)    
-    suprafata_utila = models.FloatField(
-        "Suprafață utilă",
-        null=True,
-        blank=True
-    )     
+    negociabil = models.BooleanField(default=False)      
     is_owner = models.BooleanField(
         default=False,
         help_text="Indică dacă utilizatorul a fost validat ca fiind proprietar al anunțului."
@@ -596,10 +564,14 @@ class Listing(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
     valability_end_date = models.DateField(
-        blank=True,
-        null=True,
-        help_text="Data până la care anunțul este valid."
+        default=default_expiry_date,
+        help_text="Data până la care anunțul este valid. Implicit: 90 de zile."
     )
+    auto_renewal = models.BooleanField(
+        default=False, 
+        help_text="Dacă este activ, anunțul se va prelungi automat la expirare."
+    )
+    notified_on_expiry = models.BooleanField(default=False)  # Nou câmp pentru tracking-ul notificărilor   
     views_count = models.BigIntegerField(default=0)
     like_count = models.IntegerField(default=0)
     
@@ -608,35 +580,87 @@ class Listing(models.Model):
     is_manual_label = models.BooleanField(default=False)  # Etichetare manuală    
     
     # Campuri aditionale
-    year_of_construction = models.IntegerField(null=True, blank=True, help_text="Year of construction")    
+    suprafata_utila = models.FloatField(
+        "Suprafață utilă",
+        null=True,
+        blank=True
+    )       
+    suprafata_terenului = models.FloatField(
+        "Suprafață terenului",
+        null=True,
+        blank=True
+    )
+    suprafata_constructie = models.FloatField(
+        "Suprafață construită",
+        null=True,
+        blank=True
+    )    
+    suprafata_balcoane = models.FloatField(
+        "Suprafață balcoane",
+        null=True,
+        blank=True
+    )        
+    year_of_construction = models.IntegerField(
+        null=True, blank=True,
+        help_text="Year of construction"
+    )    
     compartimentare = models.SmallIntegerField(
         choices=COMPARTIMENTARE_CHOICES,
-        null=True,
-        blank=True,
+        null=True, blank=True,
         db_index=True
     )
     zonare = models.SmallIntegerField(
         choices=ZONARE_CHOICES, 
-        null=True, 
-        blank=True,
+        null=True, blank=True,        
         db_index=True,        
-        help_text="Zonarea poate fi intravilan, extravilan sau necompletată."
+        help_text="Zonarea poate fi intravilan, extravilan."
     )  
     numar_camere = models.IntegerField(
         choices=NUMAR_CAMERE_CHOICES, 
-        default=1,
-        null=True, 
-        blank=True,
-        db_index=True,  
-        help_text="Se aplica doar pentru apartamente, case, vile, spatii comerciale."                
-        )   
+        null=True, blank=True,   
+        db_index=True              
+    )  
+    number_of_bedrooms = models.SmallIntegerField(
+        choices=NUMBER_OF_BEDROOMS_CHOICES,
+        null=True, blank=True,
+        db_index=True
+    )      
+    number_of_bathrooms = models.SmallIntegerField(
+        choices=NUMBER_OF_BATHROOMS_CHOICES,
+        null=True, blank=True,        
+        db_index=True      
+    ) 
+    number_of_balconies = models.SmallIntegerField(
+        choices=NUMBER_OF_BALCONIES_CHOICES,
+        null=True, blank=True,
+        db_index=True
+    )    
     structura = models.IntegerField(
         choices=STRUCTURA_CHOICES,
-        null=True,
-        blank=True,
+        null=True, blank=True,        
         db_index=True
     )     
-    floor = models.SmallIntegerField(choices=FLOOR_CHOICES, db_index=True, null=True, blank=True)    
+    floor = models.SmallIntegerField(
+        choices=FLOOR_CHOICES, 
+        null=True, blank=True,
+        db_index=True
+    )  
+    foundation_type  = models.IntegerField(
+        choices=FOUNDATION_TYPE_CHOICES,
+        null=True, blank=True,       
+        db_index=True
+    )          
+    number_of_floors = models.PositiveIntegerField(
+        null=True, blank=True,       
+        db_index=True,
+        help_text="Exemplu: 20 pentru P+20E"        
+    )
+    has_attic = models.BooleanField(default=False)  # True dacă are mansardă
+    clasa_energetica = models.IntegerField(
+        choices=CLASA_ENERGETICA_CHOICES,
+        null=True, blank=True,
+        db_index=True
+    )
     
     # SEO
     slug = models.SlugField(max_length=160, unique=True, blank=True)
@@ -674,10 +698,20 @@ class Listing(models.Model):
         # Salvează actualizarea în baza de date
         self.save(update_fields=['like_count'])
         
-        return created  # Returnează True dacă like-ul a fost adăugat, False dacă a fost eliminat     
+        return created  # Returnează True dacă like-ul a fost adăugat, False dacă a fost eliminat   
+    
+    def renew_if_needed(self):
+        """Prelungește anunțul dacă are auto_renewal activ."""
+        if self.auto_renewal and self.valability_end_date <= now().date():
+            self.valability_end_date += timedelta(days=90)
+            self.save()  
+            
+    def has_expired(self):
+        """Verifică dacă anunțul a expirat."""
+        return self.valability_end_date < now().date()            
       
     def __str__(self):
-        return f"{self.title} - {self.price} {dict(self.CURRENCY_CHOICES).get(self.currency)}"
+        return f"{self.title} - {self.price} {dict(CURRENCY_CHOICES).get(self.currency, self.currency)}"
 
     class Meta:
         verbose_name = "Listing"

@@ -23,7 +23,7 @@ from django.conf import settings
 # for hashing
 from .utils import generate_hash
 
-from .constants import MONTHS_RO
+from .constants import MONTHS_RO, FIELD_LABELS
 
 logger = logging.getLogger(__name__)
 
@@ -438,7 +438,7 @@ class TagSerializer(serializers.ModelSerializer):
 class TagSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = ['id', 'name', 'slug']    
+        fields = ['id', 'name', 'slug', 'icon_name']    
         
 class CategoryDetailSerializer(serializers.ModelSerializer):
     parent = serializers.SerializerMethodField()
@@ -522,13 +522,23 @@ class ListingSerializer(serializers.ModelSerializer):
             'tag_ids',                
             'meta_title', 
             'meta_description', 
-            'compartimentare', 
-            'zonare',
-            'suprafata_utila',
-            'numar_camere',
-            'year_of_construction',
+            'suprafata_utila',            
+            'suprafata_terenului',
+            'suprafata_constructie',
+            'suprafata_balcoane',             
+            'year_of_construction',   
+            'compartimentare',              
+            'zonare', 
+            'numar_camere',                 
+            'number_of_bedrooms',                          
+            'number_of_bathrooms',
+            'number_of_balconies',
             'structura',
-            'floor',   
+            'floor', 
+            'foundation_type',
+            'number_of_floors',
+            'has_attic',
+            'clasa_energetica',
             'buyer_commission',      
         ]    
 
@@ -536,13 +546,7 @@ class ListingSerializer(serializers.ModelSerializer):
         # Obține ID-urile transmise
         county_id = data.get('county_id')
         city_id = data.get('city_id')
-        neighborhood_id = data.get('neighborhood_id')  
-        compartimentare = data.get('compartimentare')
-        zonare = data.get('zonare')    
-        numar_camere = data.get('numar_camere')   
-        year_of_construction = data.get('year_of_construction')    
-        structura = data.get('structura')   
-        floor = data.get('floor')                        
+        neighborhood_id = data.get('neighborhood_id')                      
         
         # Obține categoria
         category = Category.objects.get(id=data['category_id']) 
@@ -593,41 +597,77 @@ class ListingSerializer(serializers.ModelSerializer):
         if Listing.objects.filter(slug=slug_base).exclude(id=self.instance.id if self.instance else None).exists():
             raise serializers.ValidationError({"slug": "Slug-ul generat există deja. Vă rugăm să modificați titlul sau alte date pentru a genera un slug unic."})
 
-        # Verificăm regula pentru "compartimentare"
-        if compartimentare is not None and category.group != 0:
-            raise serializers.ValidationError({
-                'compartimentare': 'Câmpul "Compartimentare" nu este permis pentru această categorie.'
-            })    
-            
-        # Verificăm regula pentru "zonare"
-        if zonare is not None and category.group != 3:
-            raise serializers.ValidationError({
-                'zonare': 'Câmpul "Zonare terenuri" nu este permis pentru această categorie.'
-            })
-            
-        # Verificăm regula pentru "numar_camere"
-        if numar_camere is not None and category.group not in [0, 1, 2]:
-            raise serializers.ValidationError({
-                'numar_camere': 'Câmpul "Număr camere" nu este permis pentru această categorie.'
-            })    
+        # Verificare pentru câmpurile dorite în funcție de categorie
+        required_fields_by_category = {
+            0: ['compartimentare', 'numar_camere', 'number_of_bedrooms', 'year_of_construction', 'number_of_bathrooms', 'number_of_balconies', 'structura', 'floor', 'foundation_type', 'number_of_floors', 'suprafata_utila', 'suprafata_constructie', 'clasa_energetica'], # Apartamente
+            1: ['compartimentare', 'numar_camere', 'year_of_construction', 'number_of_bathrooms', 'number_of_balconies', 'structura', 'floor', 'foundation_type', 'number_of_floors', 'suprafata_utila', 'suprafata_constructie', 'clasa_energetica'], # Birouri și Spații Comerciale
+            2: ['compartimentare', 'numar_camere', 'number_of_bedrooms', 'year_of_construction', 'number_of_bathrooms', 'number_of_balconies', 'structura', 'foundation_type', 'number_of_floors', 'suprafata_utila', 'suprafata_constructie', 'clasa_energetica'], # Case și Vile          
+            3: ['zonare', 'suprafata_terenului'], # Terenuri
+            4: ['year_of_construction', 'structura', 'number_of_floors', 'suprafata_constructie'], # Alte proprietăți, Depozite, Hale industriale 
+            5: ['numar_camere', 'year_of_construction', 'structura', 'foundation_type', 'number_of_floors', 'number_of_balconies', 'suprafata_utila', 'suprafata_constructie'], # Pensiuni și hoteluri                   
+        }
+        
+        # Verifică dacă suprafata_utila este mai mică decât suprafata_constructie
+        suprafata_utila = data.get('suprafata_utila')
+        suprafata_constructie = data.get('suprafata_constructie')
 
-        # Verificăm regula pentru "year_of_construction"
-        if year_of_construction is not None and category.group == 3:
-            raise serializers.ValidationError({
-                'year_of_construction': 'Câmpul "An construcție" nu este permis pentru această categorie.'
-            })    
+        if suprafata_utila is not None and suprafata_constructie is not None:
+            if suprafata_utila >= suprafata_constructie:
+                raise serializers.ValidationError({
+                    'suprafata_utila': 'Suprafața utilă nu poate fi mai mare sau egală cu suprafața construcției.'
+                })        
+        
+        # Crearea listei cu toate câmpurile permise
+        all_allowed_fields = set()
+        for fields in required_fields_by_category.values():
+            all_allowed_fields.update(fields)        
+
+        # Verificăm dacă există reguli pentru categoria curentă
+        if category.group in required_fields_by_category:
+            for field in required_fields_by_category[category.group]:
+                if data.get(field) is None:  # Verifică explicit dacă e None, dar permite 0
+                    field_label = FIELD_LABELS.get(field, field)  # Folosește denumirea user-friendly
+                    raise serializers.ValidationError({
+                        field: f"Câmpul: {field_label} este obligatoriu pentru această categorie."
+                    })
+       
+        # Obținem lista de câmpuri permise pentru categoria respectivă
+        allowed_fields = required_fields_by_category.get(category.group, [])
+
+        # Verificăm câmpurile din data
+        for field in data:
+            # Dacă câmpul nu este în lista de câmpuri permise (all_allowed_fields), trecem mai departe
+            if field not in all_allowed_fields:
+                continue
             
-        # Verificăm regula pentru "structura"
-        if structura is not None and category.group == 3:
-            raise serializers.ValidationError({
-                'structura': 'Câmpul "Structura" nu este permis pentru această categorie.'
-            })        
-            
-        # Verificăm regula pentru "floor"
-        if floor is not None and category.group == 3:
-            raise serializers.ValidationError({
-                'floor': 'Câmpul "Etaj" nu este permis pentru această categorie.'
-            })                                 
+            # Dacă câmpul este în lista all_allowed_fields, verificăm dacă este permis pentru categoria respectivă
+            if field not in allowed_fields:
+                field_label = FIELD_LABELS.get(field, field)
+                raise serializers.ValidationError({
+                    field: f"Câmpul: {field_label} nu este permis pentru această categorie."
+                })  
+                
+        # Validarea numărului de camere și dormitoare
+        number_of_bedrooms = data.get('number_of_bedrooms')
+        numar_camere = data.get('numar_camere')
+
+        # Verifică dacă există număr de camere și dormitoare
+        if number_of_bedrooms is not None and numar_camere is not None:
+            if number_of_bedrooms > numar_camere:
+                raise serializers.ValidationError({
+                    'number_of_bedrooms': 'Numărul de dormitoare nu poate fi mai mare decât numărul de camere.'
+                })  
+                
+        # Verifică dacă number_of_balconies este 0 și, dacă nu, suprafata_balcoane devine obligatorie
+        number_of_balconies = data.get('number_of_balconies')
+        suprafata_balcoane = data.get('suprafata_balcoane')
+
+        # Dacă numărul de balcoane nu este 0 și suprafața balcoanelor nu este furnizată, aruncă o eroare
+        if number_of_balconies is not None and number_of_balconies != 0:
+            if suprafata_balcoane is None:
+                raise serializers.ValidationError({
+                    'suprafata_balcoane': 'Suprafața balcoanelor este obligatorie atunci când numărul de balcoane este mai mare decât 0.'
+                })                                                    
             
         # Verificare imagini duplicate
         for i in range(1, 10):  # Iterează prin câmpurile foto
@@ -811,7 +851,6 @@ class ListingSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
-   
     
 class ListingUpdateSerializer(serializers.ModelSerializer):
     county_id = serializers.IntegerField(write_only=True, required=False)
@@ -868,14 +907,24 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             'tag',              
             'tag_ids',                
             'meta_title', 
-            'meta_description',    
-            'compartimentare',
-            'zonare', 
-            'suprafata_utila',   
-            'numar_camere',          
+            'meta_description',
+            'suprafata_utila',
+            'suprafata_terenului',
+            'suprafata_constructie', 
+            'suprafata_balcoane',                 
             'year_of_construction',   
-            'structura', 
-            'floor',   
+            'compartimentare',              
+            'zonare', 
+            'numar_camere',   
+            'number_of_bedrooms',                                        
+            'number_of_bathrooms',  
+            'number_of_balconies',                     
+            'structura',
+            'floor', 
+            'foundation_type',
+            'number_of_floors',
+            'has_attic', 
+            'clasa_energetica',
             'buyer_commission',                                                              
         ]
 
@@ -896,14 +945,6 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        category_id = data.get('category_id')
-        compartimentare = data.get('compartimentare')
-        zonare = data.get('zonare')       
-        numar_camere = data.get('numar_camere')   
-        year_of_construction = data.get('year_of_construction')    
-        structura = data.get('structura')   
-        floor = data.get('floor')        
-    
         if 'county_id' in data:
             county = County.objects.filter(id=data['county_id']).first()
             if not county:
@@ -921,51 +962,99 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             if not neighborhood:
                 raise serializers.ValidationError({'neighborhood_id': 'Cartierul selectat nu există.'})
             if 'city_id' in data and neighborhood.city_id != data['city_id']:
-                raise serializers.ValidationError({'neighborhood_id': 'Cartierul trebuie să aparțină orașului selectat.'})
-            
-        # Verificăm categoria doar dacă este furnizată
-        if category_id:
-            category = Category.objects.filter(id=category_id).first()
-            if not category:
-                raise serializers.ValidationError({'category_id': 'Categoria selectată nu există.'})
+                raise serializers.ValidationError({'neighborhood_id': 'Cartierul trebuie să apară orașului selectat.'})
 
-            # Verificăm regula pentru "compartimentare"
-            if compartimentare is not None and category.group != 0:
+        # Definirea câmpurilor necesare în funcție de categorie
+        required_fields_by_category = {
+            0: ['compartimentare', 'numar_camere', 'number_of_bedrooms', 'year_of_construction', 'number_of_bathrooms', 'number_of_balconies', 'structura', 'floor', 'foundation_type', 'number_of_floors', 'suprafata_utila', 'suprafata_constructie', 'clasa_energetica'], # Apartamente
+            1: ['compartimentare', 'numar_camere', 'year_of_construction', 'number_of_bathrooms', 'number_of_balconies', 'structura', 'floor', 'foundation_type', 'number_of_floors', 'suprafata_utila', 'suprafata_constructie', 'clasa_energetica'], # Birouri și Spații Comerciale
+            2: ['compartimentare', 'numar_camere', 'number_of_bedrooms', 'year_of_construction', 'number_of_bathrooms', 'number_of_balconies', 'structura', 'foundation_type', 'number_of_floors', 'suprafata_utila', 'suprafata_constructie', 'clasa_energetica'], # Case și Vile          
+            3: ['zonare', 'suprafata_terenului'], # Terenuri
+            4: ['year_of_construction', 'structura', 'number_of_floors', 'suprafata_constructie'], # Alte proprietăți, Depozite, Hale industriale 
+            5: ['numar_camere', 'year_of_construction', 'structura', 'foundation_type', 'number_of_floors', 'number_of_balconies', 'suprafata_utila', 'suprafata_constructie'], # Pensiuni și hoteluri                   
+        }
+        
+        # Verifică dacă suprafata_utila este mai mică decât suprafata_constructie
+        suprafata_utila = data.get('suprafata_utila')
+        suprafata_constructie = data.get('suprafata_constructie')
+
+        if suprafata_utila is not None and suprafata_constructie is not None:
+            if suprafata_utila >= suprafata_constructie:
                 raise serializers.ValidationError({
-                    'compartimentare': 'Câmpul "Compartimentare" nu este permis pentru această categorie.'
-                })    
+                    'suprafata_utila': 'Suprafața utilă nu poate fi mai mare sau egală cu suprafața construcției.'
+                })          
+
+        # Crearea listei cu toate câmpurile permise
+        all_allowed_fields = set()
+        for fields in required_fields_by_category.values():
+            all_allowed_fields.update(fields)
+
+        # Obținem categoria deja disponibilă (de exemplu, dintr-o instanță existentă)
+        category = Category.objects.filter(id=data.get('category_id', self.instance.category_id)).first()
+        if not category:
+            raise serializers.ValidationError({'category_id': 'Categoria selectată nu există.'})
+
+        # Verificăm dacă câmpurile obligatorii sunt completate
+        if category.group in required_fields_by_category:
+            for field in required_fields_by_category[category.group]:
+                if field in data and data.get(field) is None:
+                    field_label = FIELD_LABELS.get(field, field)
+                    raise serializers.ValidationError({
+                        field: f"Câmpul: {field_label} este obligatoriu pentru această categorie."
+                    })
+
+        # Obținem lista de câmpuri permise pentru categoria respectivă
+        allowed_fields = required_fields_by_category.get(category.group, [])
+
+        # Verificăm câmpurile din data
+        for field in data:
+            # Dacă câmpul nu este în lista de câmpuri permise (all_allowed_fields), trecem mai departe
+            if field not in all_allowed_fields:
+                continue
+            
+            # Dacă câmpul este în lista all_allowed_fields, verificăm dacă este permis pentru categoria respectivă
+            if field not in allowed_fields:
+                field_label = FIELD_LABELS.get(field, field)
+                raise serializers.ValidationError({
+                    field: f"Câmpul: {field_label} nu este permis pentru această categorie."
+                })
                 
-            # Verificăm regula pentru "zonare"
-            if zonare is not None and category.group != 3:
+        # Validarea numărului de camere și dormitoare (pentru PATCH)
+        number_of_bedrooms = data.get('number_of_bedrooms', self.instance.number_of_bedrooms)
+        numar_camere = data.get('numar_camere', self.instance.numar_camere)
+
+        # Verificare dacă numărul de dormitoare nu este mai mare decât numărul de camere
+        if number_of_bedrooms > numar_camere:
+            raise serializers.ValidationError({
+                'number_of_bedrooms': 'Numărul de dormitoare nu poate fi mai mare decât numărul de camere.'
+            })   
+            
+        # Verifică dacă number_of_balconies este 0 și, dacă nu, suprafata_balcoane devine obligatorie
+        number_of_balconies = data.get('number_of_balconies')
+        suprafata_balcoane = data.get('suprafata_balcoane')
+
+        # Dacă numărul de balcoane nu este 0 și suprafața balcoanelor nu este furnizată, aruncă o eroare
+        if number_of_balconies is not None and number_of_balconies != 0:
+            if suprafata_balcoane is None:
                 raise serializers.ValidationError({
-                    'zonare': 'Câmpul "Zonare terenuri" nu este permis pentru această categorie.'
-                })   
-                
-            # Verificăm regula pentru "numar_camere"
-            if numar_camere is not None and category.group not in [0, 1, 2]:
-                raise serializers.ValidationError({
-                    'numar_camere': 'Câmpul "Număr camere" nu este permis pentru această categorie.'
-                })  
-                
-            # Verificăm regula pentru "year_of_construction"
-            if year_of_construction is not None and category.group == 3:
-                raise serializers.ValidationError({
-                    'year_of_construction': 'Câmpul "An construcție" nu este permis pentru această categorie.'
-                })                
-                
-            # Verificăm regula pentru "structura"
-            if structura is not None and category.group == 3:
-                raise serializers.ValidationError({
-                    'structura': 'Câmpul "Structura" nu este permis pentru această categorie.'
-                })  
-                
-            # Verificăm regula pentru "floor"
-            if floor is not None and category.group == 3:
-                raise serializers.ValidationError({
-                    'floor': 'Câmpul "Etaj" nu este permis pentru această categorie.'
-                })                                    
+                    'suprafata_balcoane': 'Suprafața balcoanelor este obligatorie atunci când numărul de balcoane este mai mare decât 0.'
+                })                          
+
+        # Verificare pentru year_of_construction (doar dacă este trimis)
+        if data.get('year_of_construction') is not None:
+            value = data['year_of_construction']
+            anul_curent = datetime.now().year
+
+            # Verificare pentru exact 4 cifre
+            if not (1000 <= value <= 9999):
+                raise serializers.ValidationError("Anul construcției trebuie să aibă exact 4 cifre.")
+            
+            # Verificare pentru a nu depăși anul curent
+            if value > anul_curent:
+                raise serializers.ValidationError(f"Anul construcției nu poate fi mai mare decât anul curent ({anul_curent}).")
+
         return data
-    
+
     def validate_suprafata_utila(self, value):
         # Verificăm dacă valoarea este pozitivă
         if value is not None and value <= 0:
@@ -984,20 +1073,7 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
     def validate_longitude(self, value):
         if value < -180 or value > 180:
             raise serializers.ValidationError("Longitudinea trebuie să fie între -180 și 180.")
-        return value         
-    
-    def validate_year_of_construction(self, value):
-        anul_curent = datetime.now().year
-
-        # Verificare pentru exact 4 cifre
-        if not (1000 <= value <= 9999):
-            raise serializers.ValidationError("Anul construcției trebuie să aibă exact 4 cifre.")
-        
-        # Verificare pentru a nu depăși anul curent
-        if value > anul_curent:
-            raise serializers.ValidationError(f"Anul construcției nu poate fi mai mare decât anul curent ({anul_curent}).")
-        
-        return value         
+        return value    
     
     def update(self, instance, validated_data):
         title = validated_data.get('title', instance.title)
@@ -1131,7 +1207,17 @@ class ListingDetailSerializer(serializers.ModelSerializer):
     county_slug = serializers.CharField(source='county.slug', read_only=True)
     city_slug = serializers.CharField(source='city.slug', read_only=True)
     neighborhood_slug = serializers.CharField(source='neighborhood.slug', read_only=True)
-    category_slug = serializers.CharField(source='category.slug', read_only=True)    
+    category_slug = serializers.CharField(source='category.slug', read_only=True)  
+    compartimentare = serializers.CharField(source='get_compartimentare_display', read_only=True) 
+    zonare_display = serializers.CharField(source='get_zonare_display', read_only=True)  
+    numar_camere_display = serializers.CharField(source='get_numar_camere_display', read_only=True)      
+    number_of_bedrooms_display = serializers.CharField(source='get_number_of_bedrooms_display', read_only=True)           
+    number_of_bathrooms = serializers.CharField(source='get_number_of_bathrooms_display', read_only=True)
+    number_of_balconies_display = serializers.CharField(source='get_number_of_balconies_display', read_only=True)     
+    structura_display = serializers.CharField(source='get_structura_display', read_only=True)
+    floor_display = serializers.CharField(source='get_floor_display', read_only=True) 
+    foundation_type_display = serializers.CharField(source='get_foundation_type_display', read_only=True) 
+    clasa_energetica_display = serializers.CharField(source='get_clasa_energetica_display', read_only=True)                 
     tag = TagSimpleSerializer(read_only=True, many=True)
     user = UserInfoSerializer(read_only=True)  # Include datele despre utilizatorul care a adăugat anunțul    
     
@@ -1143,6 +1229,7 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             'description',
             'price',
             'negociabil',
+            'buyer_commission',            
             'status',
             'photo1',
             'photo2',
@@ -1158,6 +1245,23 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             'longitude',
             'created_date',
             'valability_end_date',
+            'suprafata_utila',            
+            'suprafata_terenului',
+            'suprafata_constructie',     
+            'suprafata_balcoane',                        
+            'year_of_construction',
+            'compartimentare',
+            'zonare_display',
+            'numar_camere_display',  
+            'number_of_bedrooms_display',          
+            'number_of_bathrooms',
+            'number_of_balconies_display',
+            'structura_display',
+            'floor_display',
+            'foundation_type_display',
+            'number_of_floors',
+            'has_attic', 
+            'clasa_energetica_display',           
             'views_count',
             'like_count',
             'slug',
@@ -1170,8 +1274,7 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             'neighborhood_slug',
             'category_slug',            
             'tag',
-            'user',
-            'suprafata_utila',             
+            'user',                     
         ]
     
 
@@ -1181,7 +1284,7 @@ class ListingMinimalSerializer(serializers.ModelSerializer):
     phone_number = serializers.SerializerMethodField()
     suprafata_utila = serializers.SerializerMethodField()
     floor_display = serializers.SerializerMethodField()
-    zonare_display = serializers.SerializerMethodField()
+    zonare_display = serializers.CharField(source='get_zonare_display', read_only=True)
     
     class Meta:
         model = Listing
@@ -1218,9 +1321,6 @@ class ListingMinimalSerializer(serializers.ModelSerializer):
     
     def get_floor_display(self, obj):
         return obj.get_floor_display()
-    
-    def get_zonare_display(self, obj):
-        return obj.get_zonare_display()    
  
 class ReportSerializer(serializers.ModelSerializer):
     listing = serializers.PrimaryKeyRelatedField(queryset=Listing.objects.all())
